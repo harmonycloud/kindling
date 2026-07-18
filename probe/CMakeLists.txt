@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-cmake_minimum_required(VERSION 2.8.1)
+cmake_minimum_required(VERSION 3.16)
 
 add_compile_options(-fPIC)
 add_compile_options(-pie)
@@ -73,5 +73,6 @@ find_package(Qt5 COMPONENTS
 		REQUIRED)
 
 include(agent-libs)
+include(bcc_minimal)
 add_subdirectory(src)
 

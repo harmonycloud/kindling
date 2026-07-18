@@ -42,6 +42,11 @@ type CgoReceiver struct {
 	stats             eventCounter
 	probeCounter      *probeCounter
 	probeCounterMutex sync.RWMutex
+
+	// eBPF CPU profiling / Pyroscope
+	symOnce   sync.Once
+	symInited bool
+	symOpts   SymOptions
 }
 
 func NewCgoReceiver(config interface{}, telemetry *component.TelemetryTools, analyzerManager *analyzerpackage.Manager) receiver.Receiver {
@@ -77,31 +82,31 @@ func (r *CgoReceiver) Start() error {
 	go r.consumeEvents()
 	go r.startGetEvents()
 	go r.getCaptureStatisticsByInterval(15 * time.Second)
+	r.EnablePeriodicFlamegraphSampling(15 * time.Second)
 
 	return nil
 }
 
 func (r *CgoReceiver) startGetEvents() {
 	var count = 0
-    var pKindlingEvents [1000]unsafe.Pointer
-    r.shutdownWG.Add(1)
+	var pKindlingEvents [1000]unsafe.Pointer
+	r.shutdownWG.Add(1)
 
-    for {
-        select {
-        case <-r.stopCh:
-            r.shutdownWG.Done()
-            return
-        default:
-            evt_count := int(C.getEventsByInterval(C.int(100000000), &pKindlingEvents[0], (unsafe.Pointer)(&count)))
-            for i := 0; i < evt_count; i++ {
-                event := convertEvent((*CKindlingEventForGo)(pKindlingEvents[i]))
-                r.eventChannel <- event
-                r.stats.add(event.Name, 1)
-            }
-        }
-    }
+	for {
+		select {
+		case <-r.stopCh:
+			r.shutdownWG.Done()
+			return
+		default:
+			evt_count := int(C.getEventsByInterval(C.int(100000000), &pKindlingEvents[0], (unsafe.Pointer)(&count)))
+			for i := 0; i < evt_count; i++ {
+				event := convertEvent((*CKindlingEventForGo)(pKindlingEvents[i]))
+				r.eventChannel <- event
+				r.stats.add(event.Name, 1)
+			}
+		}
+	}
 }
-
 
 func (r *CgoReceiver) consumeEvents() {
 	r.shutdownWG.Add(1)

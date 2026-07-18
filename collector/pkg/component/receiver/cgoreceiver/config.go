@@ -1,8 +1,11 @@
 package cgoreceiver
 
+import "time"
+
 type Config struct {
-	SubscribeInfo     []SubEvent    `mapstructure:"subscribe"`
-	ProcessFilterInfo ProcessFilter `mapstructure:"process_filter"`
+	SubscribeInfo     []SubEvent          `mapstructure:"subscribe"`
+	ProcessFilterInfo ProcessFilter       `mapstructure:"process_filter"`
+	EbpfProfiling     EbpfProfilingConfig `mapstructure:"ebpf_profiling"`
 }
 
 type SubEvent struct {
@@ -13,6 +16,25 @@ type SubEvent struct {
 
 type ProcessFilter struct {
 	Comms []string `mapstructure:"comms"`
+}
+
+// EbpfEndpointOptions is the Pyroscope push endpoint configuration.
+type EbpfEndpointOptions struct {
+	URL               string        `mapstructure:"url"`
+	RemoteTimeout     time.Duration `mapstructure:"remote_timeout"`
+	MinBackoff        time.Duration `mapstructure:"min_backoff_period"`
+	MaxBackoff        time.Duration `mapstructure:"max_backoff_period"`
+	MaxBackoffRetries int           `mapstructure:"max_backoff_retries"`
+}
+
+// EbpfProfilingConfig configures eBPF CPU stack sampling → Pyroscope export.
+// Empty endpoint.url disables the feature.
+// Empty Pids means CAPTURE_ALL; non-empty enables whitelist sampling only.
+type EbpfProfilingConfig struct {
+	Endpoint            EbpfEndpointOptions `mapstructure:"endpoint"`
+	SenderWorkerCount   int                 `mapstructure:"sender_worker_count"`
+	SenderQueueCapacity int                 `mapstructure:"sender_queue_capacity"`
+	Pids                []uint32            `mapstructure:"pids"`
 }
 
 func NewDefaultConfig() *Config {
@@ -81,6 +103,18 @@ func NewDefaultConfig() *Config {
 		},
 		ProcessFilterInfo: ProcessFilter{
 			Comms: []string{"kindling-collec", "containerd", "dockerd", "containerd-shim"},
+		},
+		EbpfProfiling: EbpfProfilingConfig{
+			Endpoint: EbpfEndpointOptions{
+				URL:               "",
+				RemoteTimeout:     10 * time.Second,
+				MinBackoff:        500 * time.Millisecond,
+				MaxBackoff:        30 * time.Second,
+				MaxBackoffRetries: 10,
+			},
+			SenderWorkerCount:   2,
+			SenderQueueCapacity: 200,
+			Pids:                nil,
 		},
 	}
 }
