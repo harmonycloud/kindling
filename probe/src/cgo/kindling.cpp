@@ -1167,3 +1167,49 @@ void get_capture_statistics(struct capture_statistics_for_go* stats) {
   printf("Number of threads currently being suppressed: %d \n", stats->tids_suppressed);
   fflush(stdout);
 }
+
+void clear_profile_map() {
+  if (inspector) inspector->clear_profile_map();
+}
+
+void clear_stacks_map() {
+  if (inspector) inspector->clear_stacks_map();
+}
+
+int get_profile_data(struct sample_key key, struct bpf_profile_data* sample) {
+  if (!inspector) return -1;
+  return inspector->get_profile_data(key, sample);
+}
+
+int get_profile_keys(struct sample_key_set *set) {
+  if (!inspector) return -1;
+  return inspector->get_profile_keys(set);
+}
+
+void start_cpu_sampeling() {
+  if (inspector) inspector->set_cpu_sampling(PROFILING_ENABLED);
+}
+
+void start_cpu_sampeling_all() {
+  if (inspector) inspector->set_cpu_sampling(PROFILING_CAPTURE_ALL);
+}
+
+void stop_cpu_sampeling() {
+  if (inspector) inspector->set_cpu_sampling(PROFILING_DISABLED);
+}
+
+int set_profile_pids(const uint32_t *pids, uint32_t n) {
+  if (!inspector)
+    return -1;
+  inspector->clear_profile_pid_config();
+  if (!pids || n == 0)
+    return 0;
+  struct pid_config cfg = {};
+  cfg.type = PROFILING_TYPE_FRAMEPOINTERS;
+  cfg.collect = 1;
+  for (uint32_t i = 0; i < n; i++) {
+    if (inspector->set_profile_pid_config(pids[i], &cfg) != 0)
+      return -1;
+  }
+  return 0;
+}

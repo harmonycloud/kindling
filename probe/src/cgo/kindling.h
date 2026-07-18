@@ -52,6 +52,16 @@ void attach_agent(int64_t pid, char* error_message, bool is_attach);
 
 void get_capture_statistics(struct capture_statistics_for_go* stats);
 
+/* CPU continuous profiling (eBPF stack sampling → Pyroscope). */
+void clear_profile_map();
+void clear_stacks_map();
+int get_profile_data(struct sample_key key, struct bpf_profile_data* sample);
+int get_profile_keys(struct sample_key_set *set);
+void start_cpu_sampeling();
+void start_cpu_sampeling_all();
+void stop_cpu_sampeling();
+int set_profile_pids(const uint32_t *pids, uint32_t n);
+
 uint16_t get_protocol(scap_l4_proto proto);
 uint16_t get_type(ppm_param_type type);
 uint16_t get_kindling_source(uint16_t etype);

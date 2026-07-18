@@ -40,6 +40,22 @@ receivers:
         - "containerd"
         - "dockerd"
         - "containerd-shim"
+    # eBPF CPU stack sampling → Pyroscope. Empty url disables the feature.
+    # See docs/ebpf_cpu_profiling.md
+    ebpf_profiling:
+      endpoint:
+        # Example: "http://pyroscope:4040/"
+        url: ""
+        remote_timeout: 10s
+        min_backoff_period: 500ms
+        max_backoff_period: 30s
+        max_backoff_retries: 10
+      sender_worker_count: 2
+      sender_queue_capacity: 200
+      # Empty / omit = sample all processes (CAPTURE_ALL).
+      # Non-empty = only these host PIDs (PROFILING_ENABLED whitelist).
+      # Example: pids: [1234, 5678]
+      pids: []
 
 analyzers:
   cpuanalyzer:
