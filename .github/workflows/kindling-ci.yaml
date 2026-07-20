@@ -18,7 +18,7 @@ jobs:
       - name: build-by-builder-container
         uses: addnab/docker-run-action@v3
         with:
-          image: kindlingproject/agent-builder:latest
+          image: kindlingproject/agent-builder:flamegraph-amd64
           options: -v ${{ github.workspace }}:/kindling -w /kindling
           run: make
       - name: Login to DockerHub
