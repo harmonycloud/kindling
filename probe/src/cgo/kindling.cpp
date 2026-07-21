@@ -757,6 +757,7 @@ int is_normal_event(int res, sinsp_evt* s_evt, ppm_event_category* category) {
       return -1;
     }
   }
+  return 0;
 }
 
 int setTuple(kindling_event_t_for_go* p_kindling_event, const sinsp_evt_param* pTuple,
