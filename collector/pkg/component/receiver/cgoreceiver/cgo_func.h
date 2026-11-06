@@ -7,24 +7,6 @@
 
 #include <stdint.h>
 
-/* Must match agent-libs driver/bpf/types.h layout. */
-struct bpf_profile_data {
-	uint32_t pid;
-	uint64_t user_stack[127];
-	uint64_t kernel_stack[127];
-	uint64_t count;
-} __attribute__((aligned(8)));
-struct sample_key {
-	uint32_t pid;
-	int32_t kernel_stack_id;
-	int32_t user_stack_id;
-	char comm[16];
-} __attribute__((aligned(8)));
-struct sample_key_set {
-	uint32_t nr_keys;
-	struct sample_key *keys;
-} __attribute__((aligned(8)));
-
 struct capture_statistics_for_go {
 	int evts;
 	int drops;
@@ -95,28 +77,6 @@ void stopProfileDebug();
 void getCaptureStatistics(struct capture_statistics_for_go *stats);
 void catchSignalUp();
 
-/* CPU continuous profiling */
-int getProfileData(struct sample_key key, struct bpf_profile_data *sample);
-int getProfileKeys(struct sample_key_set *set);
-void freeProfileKeys(struct sample_key_set *set);
-void clearProfileMap();
-void clearStacksMap();
-void startCpuSampeling();
-void startCpuSampelingAll();
-void stopCpuSampeling();
-int setProfilePids(const uint32_t *pids, uint32_t n);
-int symbolizerInit(void);
-void symbolizerShutdown(void);
-int symbolizeProcessNamesWithFallback(
-	uint32_t pid,
-	const uint64_t *addrs, uint32_t n,
-	int debug_syms, int perf_map, int map_files,
-	char ***out_names, uint32_t *out_n);
-int symbolizeKernelNames(
-	const uint64_t *addrs, uint32_t n,
-	char ***out_names, uint32_t *out_n);
-void freeNames(char **names, uint32_t n);
-void maintainBccCaches(int64_t seconds);
 #ifdef __cplusplus
 }
 #endif
