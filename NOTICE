@@ -16,7 +16,9 @@ This product contains code derived from the Datadog project.
 Component: Conntrack implementation
 Description: Connection tracking and retrieval of connection information.
 
-Copyright 2016-present Datadog, Inc.
+Copyright 2016-present Datadog  Authors.
+
+License: MIT License
 
 -----------------------------------------------------------------------
 OpenTelemetry eBPF Profiler
@@ -30,23 +32,4 @@ Description: Methods and utilities for processing profiling data.
 
 Copyright The OpenTelemetry Authors.
 
------------------------------------------------------------------------
-Closed-Source Binary Components
------------------------------------------------------------------------
-
-The Kindling camera feature depends on the shared library
-kindling-plugin.so.
-
-This component is provided free of charge for use with Kindling. Its
-source code is not publicly available, and the component is not released
-under an open-source license.
-
-The Apache License, Version 2.0, applicable to Kindling's open-source
-code does not extend to this component.
-
-Additional shared libraries located in the libso/ directory are runtime
-dependencies of kindling-plugin.so and may be subject to their respective
-licensing terms.
-
-This notice does not grant additional rights to modify or redistribute
-these binary components.
+License: Apache License V2.0
