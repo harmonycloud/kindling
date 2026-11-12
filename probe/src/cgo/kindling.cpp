@@ -3,6 +3,7 @@
 //
 
 #include "kindling.h"
+#include "profiling_inspector.h"
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
@@ -16,6 +17,8 @@ cpu_converter* cpuConverter;
 fstream debug_file_log;
 map<uint64_t, char*> ptid_comm;
 static sinsp* inspector = nullptr;
+
+sinsp* profiling_inspector() { return inspector; }
 sinsp_evt_formatter* formatter = nullptr;
 bool printEvent = false;
 int cnt = 0;
@@ -105,7 +108,7 @@ int get_events_by_interval(uint64_t interval, void** kindlingEvents, void* count
         break;
       }
     }
-  return i;  
+  return i;
 }
 
 void suppress_events_comm(string comm) {
@@ -1169,24 +1172,6 @@ void get_capture_statistics(struct capture_statistics_for_go* stats) {
   fflush(stdout);
 }
 
-void clear_profile_map() {
-  if (inspector) inspector->clear_profile_map();
-}
-
-void clear_stacks_map() {
-  if (inspector) inspector->clear_stacks_map();
-}
-
-int get_profile_data(struct sample_key key, struct bpf_profile_data* sample) {
-  if (!inspector) return -1;
-  return inspector->get_profile_data(key, sample);
-}
-
-int get_profile_keys(struct sample_key_set *set) {
-  if (!inspector) return -1;
-  return inspector->get_profile_keys(set);
-}
-
 void start_cpu_sampeling() {
   if (inspector) inspector->set_cpu_sampling(PROFILING_ENABLED);
 }
@@ -1197,20 +1182,4 @@ void start_cpu_sampeling_all() {
 
 void stop_cpu_sampeling() {
   if (inspector) inspector->set_cpu_sampling(PROFILING_DISABLED);
-}
-
-int set_profile_pids(const uint32_t *pids, uint32_t n) {
-  if (!inspector)
-    return -1;
-  inspector->clear_profile_pid_config();
-  if (!pids || n == 0)
-    return 0;
-  struct pid_config cfg = {};
-  cfg.type = PROFILING_TYPE_FRAMEPOINTERS;
-  cfg.collect = 1;
-  for (uint32_t i = 0; i < n; i++) {
-    if (inspector->set_profile_pid_config(pids[i], &cfg) != 0)
-      return -1;
-  }
-  return 0;
 }

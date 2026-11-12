@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"connectrpc.com/connect"
@@ -16,7 +18,6 @@ import (
 	"github.com/prometheus/prometheus/model/labels"
 )
 
-// RawSample holds a gzip-compressed pprof payload.
 type RawSample struct {
 	RawProfile []byte `json:"raw_profile"`
 	ID         string `json:"id"`
@@ -56,6 +57,46 @@ type AsyncSender struct {
 	workers    int
 	ctx        context.Context
 	cancel     context.CancelFunc
+
+	enqueued  atomic.Uint64
+	queueFull atomic.Uint64
+	pushOK    atomic.Uint64
+	retries   atomic.Uint64
+	failedMu  sync.Mutex
+	failed    map[string]uint64
+}
+
+// SenderStats are cumulative push counters. Failed is keyed by connect code.
+type SenderStats struct {
+	Enqueued  uint64
+	QueueFull uint64
+	PushOK    uint64
+	Retries   uint64
+	Failed    map[string]uint64
+}
+
+// Stats returns a copy of the cumulative counters.
+func (s *AsyncSender) Stats() SenderStats {
+	st := SenderStats{
+		Enqueued:  s.enqueued.Load(),
+		QueueFull: s.queueFull.Load(),
+		PushOK:    s.pushOK.Load(),
+		Retries:   s.retries.Load(),
+	}
+	s.failedMu.Lock()
+	st.Failed = make(map[string]uint64, len(s.failed))
+	for k, v := range s.failed {
+		st.Failed[k] = v
+	}
+	s.failedMu.Unlock()
+	return st
+}
+
+func (s *AsyncSender) recordFailed(err error) {
+	code := connect.CodeOf(err).String()
+	s.failedMu.Lock()
+	s.failed[code]++
+	s.failedMu.Unlock()
 }
 
 func NewAsyncSender(endpointURL string, timeout time.Duration, workers, queueCap int,
@@ -76,15 +117,11 @@ func NewAsyncSender(endpointURL string, timeout time.Duration, workers, queueCap
 	)
 	ctx, cancel := context.WithCancel(context.Background())
 	s := &AsyncSender{
-		q:          make(chan *connect.Request[pushv1.PushRequest], queueCap),
-		client:     c,
-		timeout:    timeout,
-		minBackoff: minB,
-		maxBackoff: maxB,
-		maxRetries: maxRetries,
-		workers:    workers,
-		ctx:        ctx,
-		cancel:     cancel,
+		q:      make(chan *connect.Request[pushv1.PushRequest], queueCap),
+		client: c, timeout: timeout,
+		minBackoff: minB, maxBackoff: maxB, maxRetries: maxRetries,
+		workers: workers, ctx: ctx, cancel: cancel,
+		failed: map[string]uint64{},
 	}
 	for i := 0; i < workers; i++ {
 		go s.worker()
@@ -97,8 +134,10 @@ func (s *AsyncSender) Stop() { s.cancel(); close(s.q) }
 func (s *AsyncSender) Enqueue(req *connect.Request[pushv1.PushRequest]) error {
 	select {
 	case s.q <- req:
+		s.enqueued.Add(1)
 		return nil
 	default:
+		s.queueFull.Add(1)
 		return fmt.Errorf("flamegraph send queue full")
 	}
 }
@@ -115,14 +154,23 @@ func (s *AsyncSender) worker() {
 			bo := backoff.New(s.ctx, backoff.Config{
 				MinBackoff: s.minBackoff, MaxBackoff: s.maxBackoff, MaxRetries: s.maxRetries,
 			})
-			for bo.Ongoing() {
+			err := s.ctx.Err()
+			for attempt := 0; bo.Ongoing(); attempt++ {
+				if attempt > 0 {
+					s.retries.Add(1)
+				}
 				ctx, cancel := context.WithTimeout(s.ctx, s.timeout)
-				_, err := s.client.Push(ctx, req)
+				_, err = s.client.Push(ctx, req)
 				cancel()
 				if err == nil || !shouldRetry(err) {
 					break
 				}
 				bo.Wait()
+			}
+			if err == nil {
+				s.pushOK.Add(1)
+			} else {
+				s.recordFailed(err)
 			}
 		}
 	}
@@ -140,6 +188,7 @@ func shouldRetry(err error) bool {
 		connect.CodeAborted:
 		return true
 	default:
+
 		return false
 	}
 }

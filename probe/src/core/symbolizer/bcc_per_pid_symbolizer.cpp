@@ -7,9 +7,9 @@
 #include <cctype>
 #include <cerrno>
 #include <cstdlib>
-#include <cstdio>
+#include "spdlog/spdlog.h"
 namespace {
-    // 直接从 [p, q) 解析十六进制
+
     static inline bool parseHexU64Span(const char* p, const char* q, uint64_t& out) {
         if (!p || !q || p >= q) return false;
         uint64_t v = 0;
@@ -26,7 +26,6 @@ namespace {
         return true;
     }
 
-    // 以小写十六进制将 value 追加到 dst 末尾（不带 0x 前缀）
     static inline void appendHexLower(std::string& dst, uint64_t value) {
         char buf[16];
         int idx = 16;
@@ -115,9 +114,16 @@ int BccPerPidSymbolizer::resolveProcess(uint32_t pid, const uint64_t* addrs, siz
     if (!cache) return -1;
 
     out.resize(n);
+    bool refreshed = false;
     for (size_t i = 0; i < n; i++) {
         bcc_symbol sym{};
         int rc = bcc_symcache_resolve(cache, addrs[i], &sym);
+
+        if (rc != 0 && !sym.module && !refreshed && refreshIfStale(pid)) {
+            refreshed = true;
+            sym = bcc_symbol{};
+            rc = bcc_symcache_resolve(cache, addrs[i], &sym);
+        }
         if (rc == 0) {
             const char* nm = sym.demangle_name ? sym.demangle_name : sym.name;
             if (nm) out[i].assign(nm); else out[i].clear();
@@ -182,7 +188,7 @@ bool BccPerPidSymbolizer::refreshPid(uint32_t pid) {
     auto it = pid2cache_.find(pid);
     if (it != pid2cache_.end() && it->second.cache) bcc_symcache_refresh(it->second.cache);
     else return false;
-    // 同步刷新 maps
+
     it->second.lastUsed = std::chrono::steady_clock::now();
     lruTouch(pid, it->second);
     refreshMaps(pid);
@@ -200,10 +206,22 @@ void BccPerPidSymbolizer::releasePid(uint32_t pid) {
     }
 }
 
+bool BccPerPidSymbolizer::refreshIfStale(uint32_t pid) {
+    auto it = pid2cache_.find(pid);
+    if (it == pid2cache_.end() || !it->second.cache) return false;
+    auto now = std::chrono::steady_clock::now();
+
+    if (now - it->second.lastRefresh < REFRESH_COOLDOWN) return false;
+    bcc_symcache_refresh(it->second.cache);
+    refreshMaps(pid);
+    it->second.lastRefresh = now;
+    return true;
+}
+
 void BccPerPidSymbolizer::maintainCaches(std::chrono::seconds ttl) {
     std::unique_lock<std::mutex> lock(mu_);
     auto now = std::chrono::steady_clock::now();
-    // 因为 LRU 顺序与 lastUsed 一致（每次 touch 都挪到尾），可以从头部按需清理
+
     auto it = lru_.begin();
     while (it != lru_.end()) {
         uint32_t pid = *it;
@@ -218,17 +236,7 @@ void BccPerPidSymbolizer::maintainCaches(std::chrono::seconds ttl) {
         }
     }
 
-    // 将剩余（活跃）pid 收集后再统一刷新，避免遍历中移动 LRU 迭代器, 刷新失败会删除。
-    std::vector<uint32_t> toRefresh;
-    toRefresh.reserve(lru_.size());
-    for (auto it2 = it; it2 != lru_.end(); ++it2) toRefresh.push_back(*it2);
-
-    for (uint32_t rpid : toRefresh) {
-        if(!refreshPid(rpid))releasePid(rpid);
-    }
-
-    if (kcache_)bcc_symcache_refresh(kcache_);
-    else kcache_ =  bcc_symcache_new(-1, nullptr);//todo: 报错原因未分类，如果因为权限原因 应该不再重新创建。
+    if (!kcache_) kcache_ = bcc_symcache_new(-1, nullptr);
 }
 
 void BccPerPidSymbolizer::refreshMaps(uint32_t pid) {
@@ -239,7 +247,7 @@ void BccPerPidSymbolizer::refreshMaps(uint32_t pid) {
 
     auto it = pid2cache_.find(pid);
     if (it == pid2cache_.end()) {
-        fprintf(stderr, "pid = %u, bcc cache is NULL!\n", pid);
+        spdlog::error("pid = {}, bcc cache is NULL!", pid);
         return;
     }
 
@@ -285,7 +293,7 @@ bool BccPerPidSymbolizer::fallbackByMaps(uint32_t pid, uint64_t addr, uint64_t& 
     }
 
     const auto& regions = it->second.maps;
-    // 二分查找：找到最后一个 start <= addr 的区间，并检查 addr < end
+
     size_t lo = 0, hi = regions.size();
     while (lo < hi) {
         size_t mid = lo + (hi - lo) / 2;

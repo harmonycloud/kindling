@@ -2,8 +2,6 @@
 #include <memory>
 #include <vector>
 #include <cstring>
-#include <cstdlib>
-#include <chrono>
 
 static std::unique_ptr<BccPerPidSymbolizer> g_sym;
 

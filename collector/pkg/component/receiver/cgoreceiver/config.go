@@ -1,6 +1,10 @@
 package cgoreceiver
 
-import "time"
+import (
+	"time"
+
+	"github.com/Kindling-project/kindling/collector/pkg/profiling/flamestats"
+)
 
 type Config struct {
 	SubscribeInfo     []SubEvent          `mapstructure:"subscribe"`
@@ -29,11 +33,12 @@ type EbpfEndpointOptions struct {
 
 // EbpfProfilingConfig configures eBPF CPU stack sampling → Pyroscope export.
 // Empty endpoint.url disables the feature.
-// Empty Pids means CAPTURE_ALL; non-empty enables whitelist sampling only.
+// Empty Pids disables sampling; [0] selects all processes; positive PIDs select a whitelist.
 type EbpfProfilingConfig struct {
 	Endpoint            EbpfEndpointOptions `mapstructure:"endpoint"`
 	SenderWorkerCount   int                 `mapstructure:"sender_worker_count"`
 	SenderQueueCapacity int                 `mapstructure:"sender_queue_capacity"`
+	Metrics             flamestats.Config   `mapstructure:"metrics"`
 	Pids                []uint32            `mapstructure:"pids"`
 }
 

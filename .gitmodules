@@ -1,4 +1,4 @@
 [submodule "probe/libs/agent-libs"]
 	path = probe/libs/agent-libs
-	url = https://github.com/harmonycloud/agent-libs.git
+	url = https://github.com/zhaoxiangyuHC/agent-libs.git
 	branch = kindling-dev

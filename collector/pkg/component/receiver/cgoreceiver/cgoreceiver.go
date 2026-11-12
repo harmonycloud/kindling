@@ -22,6 +22,7 @@ import (
 	analyzerpackage "github.com/Kindling-project/kindling/collector/pkg/component/analyzer"
 	"github.com/Kindling-project/kindling/collector/pkg/component/receiver"
 	"github.com/Kindling-project/kindling/collector/pkg/model"
+	"github.com/Kindling-project/kindling/collector/pkg/profiling"
 )
 
 const (
@@ -44,9 +45,7 @@ type CgoReceiver struct {
 	probeCounterMutex sync.RWMutex
 
 	// eBPF CPU profiling / Pyroscope
-	symOnce   sync.Once
-	symInited bool
-	symOpts   SymOptions
+	profiling *profiling.Service
 }
 
 func NewCgoReceiver(config interface{}, telemetry *component.TelemetryTools, analyzerManager *analyzerpackage.Manager) receiver.Receiver {
@@ -82,7 +81,7 @@ func (r *CgoReceiver) Start() error {
 	go r.consumeEvents()
 	go r.startGetEvents()
 	go r.getCaptureStatisticsByInterval(15 * time.Second)
-	r.EnablePeriodicFlamegraphSampling(15 * time.Second)
+	r.startProfiling()
 
 	return nil
 }
@@ -125,6 +124,10 @@ func (r *CgoReceiver) consumeEvents() {
 }
 
 func (r *CgoReceiver) Shutdown() error {
+	if r.profiling != nil {
+		r.profiling.Stop()
+		r.profiling = nil
+	}
 	// TODO stop the C routine
 	C.stopProfile()
 	close(r.stopCh)
