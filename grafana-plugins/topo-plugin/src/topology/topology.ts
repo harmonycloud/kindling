@@ -1,3 +1,6 @@
+// Copyright (C) 2022-2023 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 import { formatTime, formatCount, formatKMBT, formatPercent } from './tooltip';
 
 // Create a topology layout based on the Layout field in the configuration

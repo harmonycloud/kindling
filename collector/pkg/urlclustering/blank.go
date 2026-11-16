@@ -1,3 +1,6 @@
+// Copyright (C) 2022 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 package urlclustering
 
 // BlankClusteringMethod removes the endpoint and return an empty string.

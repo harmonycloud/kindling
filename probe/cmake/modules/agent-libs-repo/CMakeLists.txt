@@ -1,3 +1,6 @@
+# Copyright (C) 2022-2023 Kindling Project Authors.
+# SPDX-License-Identifier: Apache-2.0
+
 cmake_minimum_required(VERSION 3.5.1)
 
 project(. NONE)

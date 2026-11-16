@@ -1,3 +1,6 @@
+// Copyright (C) 2022-2023 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 import React, { useRef, useState, useEffect } from 'react';
 import * as G6 from '@antv/g6';
 import _ from 'lodash';

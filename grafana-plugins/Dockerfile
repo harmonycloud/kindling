@@ -1,3 +1,6 @@
+# Copyright (C) 2022-2023 Kindling Project Authors.
+# SPDX-License-Identifier: Apache-2.0
+
 FROM node:16.18.0-alpine3.15 AS pluginbuild
 WORKDIR /app/topo-plugin
 COPY topo-plugin .
