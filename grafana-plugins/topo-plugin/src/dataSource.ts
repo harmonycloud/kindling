@@ -1,3 +1,6 @@
+// Copyright (C) 2023 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 import { getDataSourceSrv, getBackendSrv, toDataQueryResponse } from '@grafana/runtime';
 import { TimeRange } from '@grafana/data';
 import { MetricType } from './types';

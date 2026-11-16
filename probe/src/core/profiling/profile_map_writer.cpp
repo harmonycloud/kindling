@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 #include "profiling/profile_map_writer.h"
 
 #include "cgo/profiling_inspector.h"

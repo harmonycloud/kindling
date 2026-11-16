@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 // Package symbolizer combines retained interpreter names and native address symbols.
 //
 // Each frame is routed on its own: kernel PCs go to the kernel symbolizer,

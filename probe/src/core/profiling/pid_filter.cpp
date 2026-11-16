@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 #include "pid_filter.h"
 
 #include "sinsp.h"

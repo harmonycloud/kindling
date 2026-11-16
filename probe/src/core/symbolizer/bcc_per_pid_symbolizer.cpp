@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 #include "bcc_per_pid_symbolizer.h"
 #include <cstring>
 #include <sstream>

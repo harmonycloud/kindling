@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef KINDLING_CGO_PROFILING_H
 #define KINDLING_CGO_PROFILING_H
 

@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 // Package ebpfapi defines the native and Python map operations used by the process manager.
 package ebpfapi
 

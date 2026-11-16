@@ -1,3 +1,6 @@
+// Copyright (C) 2022-2026 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 //
 // Created by jundi zhou on 2022/6/1.
 //

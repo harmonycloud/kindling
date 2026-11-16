@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 // Package golang names Go frames from .gopclntab, which survives strip.
 
 package golang // import "github.com/Kindling-project/kindling/collector/pkg/profiling/interpreter/golang"

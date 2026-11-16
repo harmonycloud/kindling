@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 // Package flamestats periodically logs flamegraph self-monitoring counters.
 //
 // Counting always runs at the data owners (BPF, pid sync, aggregator,

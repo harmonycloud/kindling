@@ -1,3 +1,6 @@
+// Copyright (C) 2022-2023 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 package constnames
 
 import "github.com/Kindling-project/kindling/collector/pkg/model/constvalues"

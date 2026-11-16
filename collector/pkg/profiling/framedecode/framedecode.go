@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 // Package framedecode parses typed, variable-length ProfileTrace user frames.
 
 package framedecode

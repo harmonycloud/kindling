@@ -1,3 +1,6 @@
+# Copyright (C) 2026 Kindling Project Authors.
+# SPDX-License-Identifier: Apache-2.0
+
 option(USE_BUNDLED_SPDLOG "Enable building of the bundled spdlog" ${USE_BUNDLED_DEPS})
 
 if(USE_BUNDLED_SPDLOG)

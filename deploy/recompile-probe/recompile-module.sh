@@ -1,3 +1,6 @@
+# Copyright (C) 2022-2026 Kindling Project Authors.
+# SPDX-License-Identifier: Apache-2.0
+
 mkdir -p rebuild-kindling-agent
 cd rebuild-kindling-agent
 curl -O https://github.com/harmonycloud/agent-libs/archive/refs/tags/kindling-falcolib-probe-29721003629.tar.gz
