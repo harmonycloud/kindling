@@ -70,7 +70,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum by (dst_ip) (increase(kindling_topology_request_total{src_namespace=\"$namespace\",src_workload_name=\"$workload\", protocol=\"dns\"}[$__range]))",
+          "expr": "sum by (dst_ip) (increase(kindling_topology_request_total{src_namespace=\"$namespace\",src_workload_name=\"$workload\", protocol=\"dns\"}[$__interval]))",
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{ dst_ip }}",
@@ -155,7 +155,7 @@
         {
           "datasource": "Prometheus",
           "exemplar": true,
-          "expr": "sum by (dst_ip) (increase(kindling_topology_request_total{src_namespace=\"$namespace\", src_workload_name=\"$workload\", protocol=\"dns\", status_code!=\"0\"}[$__range]))",
+          "expr": "sum by (dst_ip) (increase(kindling_topology_request_total{src_namespace=\"$namespace\", src_workload_name=\"$workload\", protocol=\"dns\", status_code!=\"0\"}[$__interval]))",
           "interval": "",
           "intervalFactor": 1,
           "legendFormat": "{{dst_ip}}",
@@ -195,70 +195,87 @@
       }
     },
     {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
       "datasource": "Prometheus",
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            }
-          },
-          "decimals": 0,
-          "mappings": [],
-          "unit": "short"
-        },
-        "overrides": []
-      },
+      "fill": 1,
+      "fillGradient": 0,
       "gridPos": {
         "h": 7,
         "w": 8,
         "x": 16,
         "y": 0
       },
-      "id": 4,
+      "hiddenSeries": false,
+      "id": 12,
       "interval": "30",
-      "links": [],
-      "maxDataPoints": 100,
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "hidden",
-          "placement": "right",
-          "values": [
-            "value",
-            "percent"
-          ]
-        },
-        "pieType": "pie",
-        "reduceOptions": {
-          "calcs": [
-            "sum"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "tooltip": {
-          "mode": "single"
-        }
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
       },
-      "pluginVersion": "7.1.1",
+      "lines": true,
+      "linewidth": 1,
+      "maxDataPoints": 100,
+      "nullPointMode": "connected",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "8.3.6",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(increase(kindling_topology_request_total{src_namespace=\"$namespace\",src_workload_name=\"$workload\",is_slow=\"true\"}[$__range]))",
-          "instant": false,
+          "expr": "sum(increase(kindling_topology_request_duration_nanoseconds_total{src_namespace=\"$namespace\", src_workload_name=\"$workload\", protocol=\"dns\"}[$__interval])) by (dst_ip) /\nsum(increase(kindling_topology_request_total{src_namespace=\"$namespace\", src_workload_name=\"$workload\", protocol=\"dns\"}[$__interval])) by (dst_ip)",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "count",
+          "legendFormat": "{{dst_ip}}",
           "refId": "A"
         }
       ],
-      "title": "Response Timeout Counts",
-      "type": "piechart"
+      "thresholds": [],
+      "timeRegions": [],
+      "title": "Response Time",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "mode": "time",
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:169",
+          "format": "ns",
+          "logBase": 1,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:170",
+          "format": "short",
+          "logBase": 1,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false
+      }
     },
     {
       "aliasColors": {},
@@ -288,7 +305,7 @@
       },
       "lines": false,
       "linewidth": 1,
-      "maxDataPoints": 100,
+      "maxDataPoints": 1,
       "nullPointMode": "null",
       "options": {
         "alertThreshold": true
@@ -306,7 +323,8 @@
         {
           "datasource": "Prometheus",
           "exemplar": true,
-          "expr": "topk(10, sum(increase(kindling_topology_request_total{src_namespace=\"$namespace\", src_workload_name=\"$workload\", protocol=\"dns\", status_code!=\"0\"}[$__range])) by (dst_ip))",
+          "expr": "topk(10, sum(increase(kindling_topology_request_total{src_namespace=\"$namespace\", src_workload_name=\"$workload\", protocol=\"dns\", status_code!=\"0\"}[$__interval])) by (dst_ip))",
+          "instant": true,
           "interval": "",
           "legendFormat": "{{ dst_ip }}",
           "refId": "A"
@@ -325,7 +343,7 @@
         "mode": "series",
         "show": false,
         "values": [
-          "total"
+          "current"
         ]
       },
       "yaxes": [
@@ -375,6 +393,7 @@
       "id": 6,
       "interval": "30",
       "links": [],
+      "maxDataPoints": 1,
       "options": {
         "legend": {
           "calcs": [],
@@ -387,7 +406,7 @@
         "pieType": "pie",
         "reduceOptions": {
           "calcs": [
-            "mean"
+            "lastNotNull"
           ],
           "fields": "",
           "values": false
@@ -399,7 +418,7 @@
       "pluginVersion": "7.1.1",
       "targets": [
         {
-          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(sum(increase(kindling_topology_request_total{src_namespace=\"$namespace\", src_workload_name=\"$workload\", protocol=\"dns\", status_code!=\"0\"}[$__range])) by (status_code), \"status_code\", \"FormatErr\", \"status_code\", \"1.*\"), \"status_code\", \"ServFail\", \"status_code\", \"2.*\"), \"status_code\", \"NXDomain\", \"status_code\", \"3.*\"), \"status_code\", \"NotImp\", \"status_code\", \"4.*\"), \"status_code\", \"Refused\", \"status_code\", \"5.*\")",
+          "expr": "label_replace(label_replace(label_replace(label_replace(label_replace(sum(increase(kindling_topology_request_total{src_namespace=\"$namespace\", src_workload_name=\"$workload\", protocol=\"dns\", status_code!=\"0\"}[$__interval])) by (status_code), \"status_code\", \"FormatErr\", \"status_code\", \"1.*\"), \"status_code\", \"ServFail\", \"status_code\", \"2.*\"), \"status_code\", \"NXDomain\", \"status_code\", \"3.*\"), \"status_code\", \"NotImp\", \"status_code\", \"4.*\"), \"status_code\", \"Refused\", \"status_code\", \"5.*\")",
           "instant": false,
           "interval": "",
           "intervalFactor": 1,
@@ -411,87 +430,69 @@
       "type": "piechart"
     },
     {
-      "aliasColors": {},
-      "bars": true,
-      "dashLength": 10,
-      "dashes": false,
       "datasource": "Prometheus",
-      "fill": 1,
-      "fillGradient": 0,
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            }
+          },
+          "decimals": 0,
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
       "gridPos": {
         "h": 7,
         "w": 8,
         "x": 16,
         "y": 7
       },
-      "hiddenSeries": false,
-      "id": 12,
+      "id": 4,
       "interval": "30",
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": false,
-      "linewidth": 1,
-      "maxDataPoints": 100,
-      "nullPointMode": "null",
+      "links": [],
+      "maxDataPoints": 1,
       "options": {
-        "alertThreshold": true
+        "legend": {
+          "calcs": [],
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value"
+          ]
+        },
+        "pieType": "pie",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
       },
-      "percentage": false,
-      "pluginVersion": "8.3.6",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
+      "pluginVersion": "7.1.1",
       "targets": [
         {
-          "expr": "sum(increase(kindling_topology_request_duration_nanoseconds_total{src_namespace=\"$namespace\", src_workload_name=\"$workload\", protocol=\"dns\"}[$__range])) by (dst_ip) /\nsum(increase(kindling_topology_request_total{src_namespace=\"$namespace\", src_workload_name=\"$workload\", protocol=\"dns\"}[$__range])) by (dst_ip)",
+          "expr": "sum by (dst_ip) (increase(kindling_topology_request_total{src_namespace=\"$namespace\",src_workload_name=\"$workload\",protocol=\"dns\",is_slow=\"true\"}[$__interval]))",
+          "instant": false,
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{dst_ip}}",
+          "legendFormat": "{{ dst_ip }}",
           "refId": "A"
         }
       ],
-      "thresholds": [],
-      "timeRegions": [],
-      "title": "Response Time",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "mode": "time",
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "$$hashKey": "object:169",
-          "format": "ns",
-          "logBase": 1,
-          "show": true
-        },
-        {
-          "$$hashKey": "object:170",
-          "format": "short",
-          "logBase": 1,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false
-      }
+      "title": "Response Timeout Counts(>100ms)",
+      "type": "piechart"
     },
     {
       "datasource": "Prometheus",
@@ -667,6 +668,8 @@
           "options": {
             "excludeByName": {
               "__name__": true,
+              "dnat_ip": false,
+              "dnat_port": true,
               "dst_namespace": true,
               "dst_node": true,
               "dst_pod": false,
@@ -678,6 +681,7 @@
               "instance": true,
               "is_server": true,
               "job": true,
+              "pid": true,
               "protocol": true,
               "request_duration_status": true,
               "request_processing_status": true,
@@ -697,40 +701,48 @@
             },
             "indexByName": {
               "Time": 0,
-              "Value": 21,
-              "__name__": 15,
-              "dst_ip": 5,
-              "dst_namespace": 7,
-              "dst_node": 26,
-              "dst_pod": 6,
-              "dst_port": 8,
-              "dst_service": 24,
-              "dst_workload_kind": 25,
+              "Value": 22,
+              "__name__": 16,
+              "dnat_ip": 5,
+              "dnat_port": 31,
+              "dst_container": 32,
+              "dst_container_id": 36,
+              "dst_ip": 6,
+              "dst_namespace": 8,
+              "dst_node": 27,
+              "dst_pod": 7,
+              "dst_port": 9,
+              "dst_service": 25,
+              "dst_workload_kind": 26,
               "dst_workload_name": 4,
-              "instance": 9,
-              "is_server": 16,
-              "job": 10,
-              "protocol": 11,
-              "request_content": 17,
-              "request_duration_status": 18,
-              "request_processing_status": 19,
-              "request_reqxfer_status": 20,
-              "response_content": 22,
-              "response_rspxfer_status": 23,
-              "service_instance_id": 12,
-              "service_name": 13,
+              "instance": 10,
+              "is_server": 17,
+              "job": 11,
+              "pid": 33,
+              "protocol": 12,
+              "request_content": 18,
+              "request_duration_status": 19,
+              "request_processing_status": 20,
+              "request_reqxfer_status": 21,
+              "response_content": 23,
+              "response_rspxfer_status": 24,
+              "service_instance_id": 13,
+              "service_name": 14,
+              "src_container": 34,
+              "src_container_id": 35,
               "src_ip": 2,
-              "src_namespace": 14,
-              "src_node": 27,
+              "src_namespace": 15,
+              "src_node": 28,
               "src_pod": 3,
-              "src_service": 28,
-              "src_workload_kind": 29,
+              "src_service": 29,
+              "src_workload_kind": 30,
               "src_workload_name": 1
             },
             "renameByName": {
               "Value": "Response Time",
               "Value #A": "Response Time",
-              "dst_ip": "Destination IP",
+              "dnat_ip": "Destination IP",
+              "dst_ip": "Destination Service IP",
               "dst_namespace": "",
               "dst_node": "",
               "dst_pod": "Destination Pod",
@@ -755,8 +767,8 @@
       {
         "current": {
           "selected": false,
-          "text": "kube-system",
-          "value": "kube-system"
+          "text": "cloudmonitor",
+          "value": "cloudmonitor"
         },
         "datasource": "Prometheus",
         "definition": "label_values(kindling_topology_request_total{protocol=\"dns\"}, src_namespace)",
@@ -782,8 +794,8 @@
       {
         "current": {
           "selected": false,
-          "text": "coredns",
-          "value": "coredns"
+          "text": "aerospike",
+          "value": "aerospike"
         },
         "datasource": "Prometheus",
         "definition": "label_values(kindling_topology_request_total{src_namespace =\"$namespace\", protocol=\"dns\"},  src_workload_name)",

@@ -1,0 +1,44 @@
+{
+  "name": "camera",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "start": "vite",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^4.8.0",
+    "antd": "4.18.8",
+    "axios": "^1.6.0",
+    "d3": "^7.6.1",
+    "d3-flame-graph": "^4.1.3",
+    "d3-tip": "^0.9.1",
+    "lodash": "^4.17.21",
+    "moment": "^2.29.4",
+    "rc-calendar": "^9.15.11",
+    "rc-time-picker": "^3.7.3",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "react-redux": "^8.0.2",
+    "react-router-dom": "^6.3.0",
+    "redux": "^4.2.0",
+    "redux-actions": "^2.6.5",
+    "redux-persist": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/d3": "^7.4.0",
+    "@types/lodash": "^4.14.182",
+    "@types/node": "^18.0.6",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "@types/react-router-dom": "^5.3.3",
+    "@types/redux-actions": "^2.6.2",
+    "@vitejs/plugin-react": "^1.3.0",
+    "less": "^4.1.3",
+    "less-loader": "^11.0.0",
+    "typescript": "^4.6.3",
+    "vite": "^2.9.18"
+  }
+}

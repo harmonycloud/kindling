@@ -1,0 +1,98 @@
+trace:
+  key: rocketmq-rocketmq
+  requests:
+    -
+      name: "sendmsg"
+      timestamp: 100000000
+      user_attributes:
+        latency: 40000
+###ROCKETMQ
+        res: 49
+#        res: 290
+        data:
+###5.Request ROCKETMQ-extFields have key "topic"
+          - 'hex|0000002d'
+          - 'hex|01000029'
+          - 'hex|006900019c'
+          - 'hex|0000000200000000'
+          - 'hex|0000000000000014'
+          - '0005|topic'
+          - '00000009|TopicTest'
+###6.Request ROCKETMQ-extFields have key 'a' 'b' 'c' 'd' 'e' 'f' 'g'
+#          - '0000011e'
+#          - '01000108'
+#          - '013600019c'
+#          - '0000079c00000000'
+#          - '00000000000000f3'
+#          - '0001|a'
+#          - '0000001f|please_rename_unique_group_name'
+#          - '0001|b'
+#          - '00000009|TopicTest'
+#          - '0001|c'
+#          - '00000006544257313032'
+#          - '0001|d'
+#          - '0000000134'
+#          - '0001|e'
+#          - '0000000130'
+#          - '0001|f'
+#          - '0000000130'
+#          - '0001670000000d31363633353837393039303934000168000000013000016900000055554e49515f4b4559014644453045363636363242463244443030303836383745413030373331374445304446353138423441414332363045463831453630334342025741495401747275650254414753015461674100016a000000013000016b0000000566616c736500016d0000000566616c736548656c6c6f20526f636b65744d5120393731'
+  responses:
+    -
+      name: "recvmsg"
+      timestamp: 101000000
+      user_attributes:
+        latency: 8000
+###ROCKETMQ
+        res: 294
+#        res: 229
+        data:
+###5.Response ROCKETMQ-extFields have key "topic"
+          - 'hex|00000122'
+          - 'hex|01000015'
+          - 'hex|000000019c'
+          - 'hex|0000000200000001'
+          - 'hex|0000000000000000'
+          - 'hex|7b2262726f6b65724461746173223a5b7b2262726f6b65724164647273223a7b2230223a223139322e3136382e36342e313a3130393131227d2c2262726f6b65724e616d65223a2262726f6b65722d61222c22636c7573746572223a2244656661756c74436c7573746572222c22656e61626c65416374696e674d6173746572223a66616c73657d5d2c2266696c7465725365727665725461626c65223a7b7d2c2271756575654461746173223a5b7b2262726f6b65724e616d65223a2262726f6b65722d61222c227065726d223a362c227265616451756575654e756d73223a342c22746f706963537973466c6167223a302c22777269746551756575654e756d73223a347d5d7d'
+###6.Response ROCKETMQ-extFields have key 'a' 'b' 'c' 'd' 'e' 'f' 'g'
+#          - '000000e1'
+#          - '010000dd'
+#          - '000000019c'
+#          - '0000079c00000001'
+#          - '00000000000000c8'
+#          - '00056d736749640000002043304138343030313030303032413946303030303030303030303139454544390007717565756549640000000130000b71756575654f66667365740000000431373432000d7472616e73616374696f6e4964000000384644453045363636363242463244443030303836383745413030373331374445304446353138423441414332363045463831453630334342000854524143455f4f4e0000000474727565000a4d53475f524547494f4e0000000d44656661756c74526567696f6e'
+  expects:
+    -
+      Timestamp: 99960000
+      Values:
+        request_total_time: 1040000
+        connect_time: 0
+        request_sent_time: 40000
+        waiting_ttfb_time: 992000
+        content_download_time: 8000
+        request_io: 49
+        response_io: 294
+      Labels:
+        comm: "rocketmq-server"
+        pid: 12346
+        request_tid: 12347
+        response_tid: 12347
+        src_ip: "127.0.0.1"
+        src_port: 45678
+        dst_ip: "127.0.0.1"
+        dst_port: 9876
+        dnat_ip: ""
+        dnat_port: -1
+        container_id: ""
+        is_slow: false
+        is_server: false
+        protocol: "rocketmq"
+        is_error: false
+        content_key: "Topic:TopicTest"
+        rocketmq_request_msg: "GET_ROUTEINFO_BY_TOPIC"
+        rocketmq_opaque: 2
+        rocketmq_error_code: 0
+        error_type: 0
+        end_timestamp: 101000000
+        request_payload: '...-...).i.....................topic....TopicTest'
+        response_payload: '...".........................{"brokerDatas":[{"brokerAddrs":{"0":"192.168.64.1:10911"},"brokerName":"broker-a","cluster":"DefaultCluster","enableActingMaster":false}],"filterServerTable":{},"queueData'

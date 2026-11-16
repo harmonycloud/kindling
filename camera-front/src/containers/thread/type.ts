@@ -1,0 +1,1 @@
+export type IFilterField = 'traceId' | 'thread' | 'log' | 'file' | 'event';

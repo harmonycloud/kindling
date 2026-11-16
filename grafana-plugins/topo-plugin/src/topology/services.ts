@@ -1,6 +1,10 @@
-import _ from 'lodash';
+// Copyright (C) 2022-2023 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
 
-export const metricList: Array<{label: string; value: any; description?: string}> = [
+import _ from 'lodash';
+import { MetricType } from '../types';
+
+export const metricList: Array<{label: string; value: MetricType; description?: string}> = [
     { label: 'Latency', value: 'latency' },
     { label: 'Calls', value: 'calls' },
     { label: 'Error Rate', value: 'errorRate' },
@@ -8,8 +12,17 @@ export const metricList: Array<{label: string; value: any; description?: string}
     { label: 'Receive Volume', value: 'receiveVolume' },
     { label: 'SRTT', value: 'rtt' },
     { label: 'Retransmit', value: 'retransmit' },
-    { label: 'Package Lost', value: 'packageLost' }
+    { label: 'Package Lost', value: 'packageLost' },
+    { label: 'Connection Failure', value: 'connFail' }
 ];
+export const metricDataName = {
+    sentVolume: 'edgeSendVolumeData',
+    receiveVolume: 'edgeReceiveVolumeData',
+    retransmit: 'edgeRetransmitData',
+    rtt: 'edgeRTTData',
+    packageLost: 'edgePackageLostData'
+}
+
 export const layoutOptions = [
     { label: 'Hierarchy Chart', value: 'dagre' },
     { label: 'Mesh Chart', value: 'force' }
@@ -29,17 +42,20 @@ export const showServiceOptions = [
 
 
 // externalTypes：The namespace enumeration value of the current external call
-const externalTypes: string[] = ['NOT_FOUND_EXTERNAL', 'NOT_FOUND_INTERNAL', 'EXTERNAL', 'external', 'default'];
+const externalTypes: string[] = ['NOT_FOUND_EXTERNAL', 'NOT_FOUND_INTERNAL', 'EXTERNAL', 'external'];
 // workloadTypes
 const workloadTypes: string[] = ['workload', 'deployment', 'daemonset', 'statefulset', 'node'];
 
+type NodeField = 'calls' | 'latency' | 'errorRate' | 'sentVolume' | 'receiveVolume';
 export interface TopologyProps {
     nodes: NodeProps[];
     edges: EdgeProps[];
 }
+
 export interface NodeProps {
     id: string;
     name: string;
+    namespace?: string;
     nodeType: string;
     showNamespace: Boolean;
     calls?: number;
@@ -63,6 +79,7 @@ export interface EdgeProps {
     rtt?: number;
     retransmit?: number;
     packageLost?: number;
+    connFail?: number;
 }
 export interface NodeDataProps {
     nodeCallsData: any[];
@@ -73,16 +90,24 @@ export interface NodeDataProps {
 export interface EdgeDataProps {
     edgeCallData: any[];
     edgeTimeData: any[];
-    edgeSendVolumeData: any[];
-    edgeReceiveVolumeData: any[];
-    edgeRetransmitData: any[];
-    edgeRTTData: any[];
-    edgePackageLostData: any[]
+    edgeSendVolumeData?: any[];
+    edgeReceiveVolumeData?: any[];
+    edgeRetransmitData?: any[];
+    edgeRTTData?: any[];
+    edgePackageLostData?: any[];
 }
 
-
+export const transformWorkload = (workload: string) => {
+    if (workload.indexOf(',') > -1) {
+        let list = workload.match(/[^{},\s]+/g);
+        return list!.toString();
+    } else {
+        return workload;
+    }
+}
 /**
  * Grafana data format conversion to facilitate subsequent debugging
+ * 高版本grafana返回数据时不在有buffer这个字段，直接取values
  * Grafana的数据格式转化提取，方便后续调试
  */
 export const transformData = (data: any[]) => {
@@ -90,7 +115,7 @@ export const transformData = (data: any[]) => {
     _.forEach(data, item => {
         let tdata: any = {
             ...item.fields[1].labels,
-            values: item.fields[1].values
+            values: item.fields[1].values.buffer ? item.fields[1].values.buffer : item.fields[1].values
         }
         result.push(tdata);
     });
@@ -104,6 +129,7 @@ export const transformData = (data: any[]) => {
 export const getNodeTypes = (nodes: any[]) => {
     let nodeByType = _.groupBy(nodes, 'nodeType');
     let types: string[] = _.keys(nodeByType);
+    _.remove(types, opt => opt === 'undefined');
     return types;
 }
 
@@ -115,6 +141,31 @@ const edgeFilter = (item: any, edge: EdgeProps) => {
         return item.src_namespace === edge.source && item.dst_namespace === edge.target;
     }
 };
+const nsNodeInfoHandle = (node: NodeProps, nodeData: NodeDataProps) => {
+    let callsList = _.filter(nodeData.nodeCallsData, item => item.namespace === node.id);
+    let timeList = _.filter(nodeData.nodeTimeData, item => item.namespace === node.id);
+    let sendVolumeList = _.filter(nodeData.nodeSendVolumeData, item => item.namespace === node.id);
+    let receiveVolumeList = _.filter(nodeData.nodeReceiveVolumeData, item => item.namespace === node.id);
+    let errorList = _.filter(callsList, item => {
+        if (item.protocol === 'http') {
+            return parseInt(item.response_content, 10) >= 400;
+        } else if (item.protocol === 'dns') {
+            return parseInt(item.response_content, 10) > 0;
+        } else {
+            return false
+        }
+    });
+
+    let calls = callsList.length > 0 ? _.chain(callsList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+    let timeValue = timeList.length > 0 ? _.chain(timeList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+    let latency = calls ? timeValue / calls / 1000000 : 0;
+    let errorValue = errorList.length > 0 ? _.chain(errorList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+    let errorRate = calls ? errorValue / calls * 100 : 0;
+    let sentVolume = sendVolumeList.length > 0 ? _.chain(sendVolumeList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+    let receiveVolume = receiveVolumeList.length > 0 ? _.chain(receiveVolumeList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+    
+    return { calls, latency, errorRate, sentVolume, receiveVolume }
+}   
 // namespace relational data handle
 export const nsRelationHandle = (topoData: any, nodeData: NodeDataProps, edgeData: EdgeDataProps) => {
     let nodes: NodeProps[] = [], edges: EdgeProps[] = [];
@@ -161,34 +212,16 @@ export const nsRelationHandle = (topoData: any, nodeData: NodeDataProps, edgeDat
             }
         }
     });
-    nodes.forEach((node: NodeProps) => {
-        if (externalTypes.indexOf(node.nodeType) === -1) {
-            let callsList = _.filter(nodeData.nodeCallsData, item => item.namespace === node.id);
-            let timeList = _.filter(nodeData.nodeTimeData, item => item.namespace === node.id);
-            let sendVolumeList = _.filter(nodeData.nodeSendVolumeData, item => item.namespace === node.id);
-            let receiveVolumeList = _.filter(nodeData.nodeReceiveVolumeData, item => item.namespace === node.id);
-            let errorList = _.filter(callsList, item => {
-                if (item.protocol === 'http') {
-                    return parseInt(item.response_content, 10) >= 400;
-                } else if (item.protocol === 'dns') {
-                    return parseInt(item.response_content, 10) > 0;
-                } else {
-                    return false
-                }
-            });
-
-            node.calls = callsList.length > 0 ? _.chain(callsList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
-            let timeValue = timeList.length > 0 ? _.chain(timeList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
-            node.latency = node.calls ? timeValue / node.calls / 1000000 : 0;
-            let errorValue = errorList.length > 0 ? _.chain(errorList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
-            node.errorRate = node.calls ? errorValue / node.calls * 100 : 0;
-            node.sentVolume = sendVolumeList.length > 0 ? _.chain(sendVolumeList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
-            node.receiveVolume = receiveVolumeList.length > 0 ? _.chain(receiveVolumeList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
-            
-            node.status = 'green';
-        }
+    _.forEach(nodes, (node: NodeProps) => {
         node.status = 'green';
+        if (externalTypes.indexOf(node.nodeType) === -1) {
+            let info: Record<NodeField, any> = nsNodeInfoHandle(node, nodeData);
+            (_.keys(info) as NodeField[]).forEach((field: NodeField) => {
+                node[field] = info[field];
+            });
+        }
     });
+
     _.remove(edges, edge => edge.source === edge.target);
     edges.forEach((edge: EdgeProps) => {
         let callsList = _.filter(topoData, item => edgeFilter(item, edge));
@@ -208,28 +241,76 @@ export const nsRelationHandle = (topoData: any, nodeData: NodeDataProps, edgeDat
         let rttList = _.filter(edgeData.edgeRTTData, item => edgeFilter(item, edge));
         let packageLostList = _.filter(edgeData.edgePackageLostData, item => edgeFilter(item, edge));
         
-        edge.calls = callsList.length > 0 ? _.chain(callsList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
-        let timeValue = timeList.length > 0 ? _.chain(timeList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
+        edge.calls = callsList.length > 0 ? _.chain(callsList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+        let timeValue = timeList.length > 0 ? _.chain(timeList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
         edge.latency = edge.calls ? timeValue / edge.calls / 1000000 : 0;
-        let errorValue = errorList.length > 0 ? _.chain(errorList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
+        let errorValue = errorList.length > 0 ? _.chain(errorList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
         edge.errorRate = edge.calls ? errorValue / edge.calls * 100 : 0;
-        edge.sentVolume = sendVolumeList.length > 0 ? _.chain(sendVolumeList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
-        edge.receiveVolume = receiveVolumeList.length > 0 ? _.chain(receiveVolumeList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
-        edge.rtt = rttList.length > 0 ? _.chain(rttList).map(item => _.compact(item.values.buffer).pop()).sum().value() / 1000 : 0;
-        edge.retransmit = retransmitList.length > 0 ? _.chain(retransmitList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
-        edge.packageLost = packageLostList.length > 0 ? _.chain(packageLostList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
+        edge.sentVolume = sendVolumeList.length > 0 ? _.chain(sendVolumeList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+        edge.receiveVolume = receiveVolumeList.length > 0 ? _.chain(receiveVolumeList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+        edge.rtt = rttList.length > 0 ? _.chain(rttList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() / 1000 : 0;
+        edge.retransmit = retransmitList.length > 0 ? _.chain(retransmitList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+        edge.packageLost = packageLostList.length > 0 ? _.chain(packageLostList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
     });
     return { nodes, edges };
 }
-
-/**
- * value data handle when select only one namespace that workload is all or workload is a single 
- * 只勾选一个namespace是workload为all或者workload为单个值的调用关系处理
- */
-export const workloadRelationHandle = (workload: string, namespace: string, topoData: any, nodeData: NodeDataProps, edgeData: EdgeDataProps, showPod: boolean, serviceLine: boolean) => {
+export const connFailNSRelationHandle = (topoData: any) => {
+    let nodes: NodeProps[] = [], edges: EdgeProps[] = [];
+    _.forEach(topoData, tdata => {
+        let target: string;
+        if (tdata.src_namespace && tdata.dst_namespace) {
+            if (tdata.protocol === 'dns') {
+                target = tdata.dst_ip;
+                if (_.findIndex(nodes, {id: tdata.dst_ip}) === -1) {
+                    nodes.push({
+                        id: tdata.dst_ip,
+                        name: tdata.dst_ip,
+                        nodeType: 'dns',
+                        showNamespace: false
+                    });
+                }
+            } else {
+                target = tdata.dst_namespace;
+                if (_.findIndex(nodes, {id: tdata.dst_namespace}) === -1) {
+                    nodes.push({
+                        id: tdata.dst_namespace,
+                        name: tdata.dst_namespace,
+                        nodeType: externalTypes.indexOf(tdata.dst_namespace) > -1 ? 'external' : 'namespace',
+                        showNamespace: false
+                    });
+                }
+            }
+            if (_.findIndex(nodes, {id: tdata.src_namespace}) === -1) {
+                nodes.push({
+                    id: tdata.src_namespace,
+                    name: tdata.src_namespace,
+                    nodeType: externalTypes.indexOf(tdata.src_namespace) > -1 ? 'external' : 'namespace',
+                    showNamespace: false
+                });
+            }
+            if (_.findIndex(edges, {source: tdata.src_namespace, target: target}) === -1) {
+                let opposite: boolean = _.findIndex(edges, {source: target, target: tdata.src_namespace}) > -1 ? true : false;
+                edges.push({
+                    source: tdata.src_namespace,
+                    target: target,
+                    opposite,
+                    dnsEdge: tdata.protocol === 'dns'
+                });
+            }
+        }
+    });
+    _.remove(edges, edge => edge.source === edge.target);
+    edges.forEach((edge: EdgeProps) => {
+        let connectData = _.filter(topoData, item => edgeFilter(item, edge));
+        let connectFailData = _.filter(connectData, item => item.success === 'false');
+        edge.connFail = connectFailData.length > 0 ? _.chain(connectFailData).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() / _.chain(connectData).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() * 100 : 0;
+    });
+    return { nodes, edges };
+}
+export const connFailWorkloadRelationHandle = (workload: string, namespace: string, topoData: any, showPod: boolean, serviceLine: boolean) => {
     let nodes: any[] = [], edges: any[] = [];
     let result: any[] = [];
-    if (workload.split(',').length > 1) {
+    if (workload.indexOf(',') > -1) {
         // 当workload为all的时候，筛选对应namespace下所有workload的调用关系
         result = _.filter(topoData, (item: any) => item.dst_namespace === namespace || item.src_namespace === namespace);
     } else {
@@ -245,13 +326,79 @@ export const workloadRelationHandle = (workload: string, namespace: string, topo
         let edgeId = `edge_${source}_${target}${service ? '_' + service : ''}`
         if (_.findIndex(edges, {id: edgeId}) === -1) {
             let opposite: boolean = _.findIndex(edges, {source: target, target: source}) > -1 ? true : false;
-                edges.push({
+            edges.push({
                 id: edgeId,
                 source: source,
                 target: target,
                 service: service || '',
                 opposite
             });
+        }
+    });
+    edges = connFailDetailEdgesHandle(nodes, edges, topoData, serviceLine);
+    return { nodes, edges };
+}
+
+export const topoMerge = (topo: TopologyProps, connTopo: TopologyProps) => {
+    let result = _.cloneDeep(topo);
+    let mergeNodes: NodeProps[] = [], mergeEdges: EdgeProps[] = [];
+    _.forEach(connTopo.edges, edge => {
+        if (_.findIndex(result.edges, {source: edge.source, target: edge.target}) === -1) {
+            if (_.findIndex(mergeEdges, {source: edge.source, target: edge.target}) === -1) {
+                mergeEdges.push(edge);
+            }
+            if (_.findIndex(result.nodes, {id: edge.source}) === -1) {
+                let node = _.find(connTopo.nodes, {id: edge.source}) as NodeProps;
+                mergeNodes.push(node);
+            }
+            if (_.findIndex(result.nodes, {id: edge.target}) === -1) {
+                let node = _.find(connTopo.nodes, {id: edge.target}) as NodeProps;
+                mergeNodes.push(node);
+            }
+        } else {
+            let edgeItem: EdgeProps = _.find(result.edges, {source: edge.source, target: edge.target}) as EdgeProps;
+            edgeItem.connFail = edge.connFail;
+        }
+    });
+    result.nodes = result.nodes.concat(mergeNodes);
+    result.edges = result.edges.concat(mergeEdges);
+    console.log(result);
+    return result;
+}
+
+/**
+ * value data handle when select only one namespace that workload is all or workload is a single 
+ * 只勾选一个namespace是workload为all或者workload为单个值的调用关系处理
+ */
+export const workloadRelationHandle = (workload: string, namespace: string, topoData: any, nodeData: NodeDataProps, edgeData: EdgeDataProps, showPod: boolean, serviceLine: boolean) => {
+    let nodes: any[] = [], edges: any[] = [];
+    let result: any[] = topoData;
+    if (workload.indexOf(',') > -1) {
+        // 当workload为all的时候，筛选对应namespace下所有workload的调用关系
+        result = _.filter(topoData, (item: any) => item.dst_namespace === namespace || item.src_namespace === namespace);
+    } else {
+        // filter Topology data when namespace and workload is specific
+        result = _.filter(topoData, (item: any) => (item.dst_namespace === namespace && item.dst_workload_name === workload) || (item.src_namespace === namespace && item.src_workload_name === workload));
+    }
+    // console.log('topology data', result);
+    _.forEach(result, tdata => {
+        let { node: targetNode, target, service } = detailRelationHandle(nodes, edges, namespace, tdata, 'dst', showPod, serviceLine);
+        let { node: sourceNode, source } = detailRelationHandle(nodes, edges, namespace, tdata, 'src', showPod, serviceLine);
+        (sourceNode && _.findIndex(nodes, {id: sourceNode.id}) === -1) && nodes.push(sourceNode);
+        (targetNode && _.findIndex(nodes, {id: targetNode.id}) === -1) && nodes.push(targetNode);
+        //  TODO 先去掉节点自调用的数据
+        if (source !== target) {
+            let edgeId = `edge_${source}_${target}${service ? '_' + service : ''}`
+            if (_.findIndex(edges, {id: edgeId}) === -1) {
+                let opposite: boolean = _.findIndex(edges, {source: target, target: source}) > -1 ? true : false;
+                    edges.push({
+                        id: edgeId,
+                        source: source,
+                        target: target,
+                        service: service || '',
+                        opposite
+                    });
+            }
         }
     });
     nodes = detailNodesHandle(nodes, nodeData);
@@ -360,6 +507,44 @@ export const detailRelationHandle = (nodes: any[], edges: any[], namespace: stri
     return { node, source, target, service }
 }
 
+const detailNodeInfoHandle = (node: NodeProps, nodeData: NodeDataProps) => {
+    let callsList = [], timeList = [], sendVolumeList = [], receiveVolumeList = []; 
+    if (workloadTypes.indexOf(node.nodeType) > -1) {
+        callsList = _.filter(nodeData.nodeCallsData, item => item.namespace === node.namespace && node.name === item.workload_name);
+        timeList = _.filter(nodeData.nodeTimeData, item => item.namespace === node.namespace && node.name === item.workload_name);
+        sendVolumeList = _.filter(nodeData.nodeSendVolumeData, item => item.namespace === node.namespace && node.name === item.workload_name);
+        receiveVolumeList = _.filter(nodeData.nodeReceiveVolumeData, item => item.namespace === node.namespace && node.name === item.workload_name);
+    } else if (node.nodeType === 'pod') {
+        callsList = _.filter(nodeData.nodeCallsData, item => item.namespace === node.namespace && node.name === item.pod);
+        timeList = _.filter(nodeData.nodeTimeData, item => item.namespace === node.namespace && node.name === item.pod);
+        sendVolumeList = _.filter(nodeData.nodeSendVolumeData, item => item.namespace === node.namespace && node.name === item.pod);
+        receiveVolumeList = _.filter(nodeData.nodeReceiveVolumeData, item => item.namespace === node.namespace && node.name === item.pod);
+    } else {
+        callsList = _.filter(nodeData.nodeCallsData, item => item.namespace === node.namespace && node.name === item.workload_name && !item.pod);
+        timeList = _.filter(nodeData.nodeTimeData, item => item.namespace === node.namespace && node.name === item.workload_name && !item.pod);
+        sendVolumeList = _.filter(nodeData.nodeSendVolumeData, item => item.namespace === node.namespace && node.name === item.workload_name && !item.pod);
+        receiveVolumeList = _.filter(nodeData.nodeReceiveVolumeData, item => item.namespace === node.namespace && node.name === item.workload_name && !item.pod);
+    }
+    let errorList = _.filter(callsList, item => {
+        if (item.protocol === 'http') {
+            return parseInt(item.response_content, 10) >= 400;
+        } else if (item.protocol === 'dns') {
+            return parseInt(item.response_content, 10) > 0;
+        } else {
+            return false
+        }
+    });
+
+    let calls = callsList.length > 0 ? _.chain(callsList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+    let timeValue = timeList.length > 0 ? _.chain(timeList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+    let latency = calls ? timeValue / calls / 1000000 : 0;
+    let errorValue = errorList.length > 0 ? _.chain(errorList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+    let errorRate = calls ? errorValue / calls * 100 : 0;
+    let sentVolume = sendVolumeList.length > 0 ? _.chain(sendVolumeList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+    let receiveVolume = receiveVolumeList.length > 0 ? _.chain(receiveVolumeList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+    
+    return { calls, latency, errorRate, sentVolume, receiveVolume }
+}
 /**
  * handle node indicator data
  * node节点数据处理（时延、调用次数、错误率、流量）
@@ -369,44 +554,13 @@ export const detailRelationHandle = (nodes: any[], edges: any[], namespace: stri
 export const detailNodesHandle = (nodes: any[], nodeData: any) => {
     let nodelist = _.cloneDeep(nodes);
     nodelist.forEach(node => {
-        let callsList = [], timeList = [], sendVolumeList = [], receiveVolumeList = []; 
-        if (externalTypes.indexOf(node.nodeType) === -1) {
-            if (workloadTypes.indexOf(node.nodeType) > -1) {
-                callsList = _.filter(nodeData.nodeCallsData, item => item.namespace === node.namespace && node.name === item.workload_name);
-                timeList = _.filter(nodeData.nodeTimeData, item => item.namespace === node.namespace && node.name === item.workload_name);
-                sendVolumeList = _.filter(nodeData.nodeSendVolumeData, item => item.namespace === node.namespace && node.name === item.workload_name);
-                receiveVolumeList = _.filter(nodeData.nodeReceiveVolumeData, item => item.namespace === node.namespace && node.name === item.workload_name);
-            } else if (node.nodeType === 'pod') {
-                callsList = _.filter(nodeData.nodeCallsData, item => item.namespace === node.namespace && node.name === item.pod);
-                timeList = _.filter(nodeData.nodeTimeData, item => item.namespace === node.namespace && node.name === item.pod);
-                sendVolumeList = _.filter(nodeData.nodeSendVolumeData, item => item.namespace === node.namespace && node.name === item.pod);
-                receiveVolumeList = _.filter(nodeData.nodeReceiveVolumeData, item => item.namespace === node.namespace && node.name === item.pod);
-            } else {
-                callsList = _.filter(nodeData.nodeCallsData, item => item.namespace === node.namespace && node.name === item.workload_name && !item.pod);
-                timeList = _.filter(nodeData.nodeTimeData, item => item.namespace === node.namespace && node.name === item.workload_name && !item.pod);
-                sendVolumeList = _.filter(nodeData.nodeSendVolumeData, item => item.namespace === node.namespace && node.name === item.workload_name && !item.pod);
-                receiveVolumeList = _.filter(nodeData.nodeReceiveVolumeData, item => item.namespace === node.namespace && node.name === item.workload_name && !item.pod);
-            }
-            let errorList = _.filter(callsList, item => {
-                if (item.protocol === 'http') {
-                    return parseInt(item.response_content, 10) >= 400;
-                } else if (item.protocol === 'dns') {
-                    return parseInt(item.response_content, 10) > 0;
-                } else {
-                    return false
-                }
-            });
-
-            node.calls = callsList.length > 0 ? _.chain(callsList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
-            let timeValue = timeList.length > 0 ? _.chain(timeList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
-            node.latency = node.calls ? timeValue / node.calls / 1000000 : 0;
-            let errorValue = errorList.length > 0 ? _.chain(errorList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
-            node.errorRate = node.calls ? errorValue / node.calls * 100 : 0;
-            node.sentVolume = sendVolumeList.length > 0 ? _.chain(sendVolumeList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
-            node.receiveVolume = receiveVolumeList.length > 0 ? _.chain(receiveVolumeList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
-            node.status = 'green';
-        }
         node.status = 'green';
+        if (externalTypes.indexOf(node.nodeType) === -1) {
+            let info: Record<NodeField, any> = detailNodeInfoHandle(node, nodeData);
+            (_.keys(info) as NodeField[]).forEach((field: NodeField) => {
+                node[field] = info[field];
+            });
+        }
     });
     return nodelist;
 }
@@ -507,17 +661,133 @@ export const detailEdgesHandle = (nodes: any[], edges: any[], edgeData: any, sho
             }
         });
         
-        edge.calls = callsList.length > 0 ? _.chain(callsList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
-        let timeValue = timeList.length > 0 ? _.chain(timeList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
+        edge.calls = callsList.length > 0 ? _.chain(callsList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+        let timeValue = timeList.length > 0 ? _.chain(timeList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
         edge.latency = edge.calls ? timeValue / edge.calls / 1000000 : 0;
-        let errorValue = errorList.length > 0 ? _.chain(errorList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
+        let errorValue = errorList.length > 0 ? _.chain(errorList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
         edge.errorRate = edge.calls ? errorValue / edge.calls * 100 : 0;
-        edge.sentVolume = sendVolumeList.length > 0 ? _.chain(sendVolumeList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
-        edge.receiveVolume = receiveVolumeList.length > 0 ? _.chain(receiveVolumeList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
-        edge.rtt = rttList.length > 0 ? _.chain(rttList).map(item => _.compact(item.values.buffer).pop()).sum().value() / 1000 : 0;
-        edge.retransmit = retransmitList.length > 0 ? _.chain(retransmitList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
-        edge.packageLost = packageLostList.length > 0 ? _.chain(packageLostList).map(item => _.compact(item.values.buffer).pop()).sum().value() : 0;
+        edge.sentVolume = sendVolumeList.length > 0 ? _.chain(sendVolumeList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+        edge.receiveVolume = receiveVolumeList.length > 0 ? _.chain(receiveVolumeList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+        edge.rtt = rttList.length > 0 ? _.chain(rttList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() / 1000 : 0;
+        edge.retransmit = retransmitList.length > 0 ? _.chain(retransmitList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+        edge.packageLost = packageLostList.length > 0 ? _.chain(packageLostList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
         // console.log(edge);
     });
     return edgelist;
+}
+
+export const connFailDetailEdgesHandle = (nodes: any[], edges: any[], edgeData: any, showService: boolean) => {
+    let edgelist = _.cloneDeep(edges);
+    edgelist.forEach((edge: EdgeProps) => {
+        let sourceNode = _.find(nodes, {id: edge.source});
+        let targteNode = _.find(nodes, {id: edge.target});
+
+        let connectData = [];
+        if (externalTypes.indexOf(sourceNode.nodeType) > -1) {
+            let ip = sourceNode.id.substring(sourceNode.id.lastIndexOf('_') + 1, sourceNode.id.indexOf(':') > -1 ? sourceNode.id.indexOf(':') : sourceNode.id.length);
+            connectData = _.filter(edgeData, item => item.src_namespace === sourceNode.namespace && item.src_ip === ip);
+        } else if (sourceNode.nodeType === 'pod') {
+            connectData = _.filter(edgeData, item => item.src_namespace === sourceNode.namespace && item.src_pod === sourceNode.name);
+        } else if (sourceNode.nodeType === 'unknow') {
+            connectData = _.filter(edgeData, item => item.src_namespace === sourceNode.namespace && item.src_workload_name === sourceNode.name && !item.src_pod);
+        } else if (workloadTypes.indexOf(sourceNode.nodeType) > -1) {
+            connectData = _.filter(edgeData, item => item.src_namespace === sourceNode.namespace && item.src_workload_name === sourceNode.name);
+        }
+
+        if (externalTypes.indexOf(targteNode.nodeType) > -1) {
+            let ip = targteNode.id.substring(targteNode.id.lastIndexOf('_') + 1, targteNode.id.indexOf(':') > -1 ? targteNode.id.indexOf(':') : targteNode.id.length);
+            connectData = _.filter(connectData, item => item.dst_namespace === targteNode.namespace && item.dst_ip === ip);
+        } else if (targteNode.nodeType === 'pod') {
+            connectData = _.filter(connectData, item => item.dst_namespace === targteNode.namespace && item.dst_pod === targteNode.name);
+        } else if (targteNode.nodeType === 'unknow') {
+            connectData = _.filter(connectData, item => item.dst_namespace === targteNode.namespace && item.dst_workload_name === targteNode.name && !item.dst_pod);
+        } else if (workloadTypes.indexOf(targteNode.nodeType) > -1)  {
+            connectData = _.filter(connectData, item => item.dst_namespace === targteNode.namespace && item.dst_workload_name === targteNode.name);
+        }
+
+        if (showService && edge.service) {
+            connectData = _.filter(connectData, item => item.dst_service === edge.service);
+        }
+        let connectFailData = _.filter(connectData, item => item.success === 'false');
+        edge.connFail = connectFailData.length > 0 ? _.chain(connectFailData).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() / _.chain(connectData).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() * 100 : 0;
+    });
+    return edgelist;
+}
+
+export const updateNode = (graphData: TopologyProps, nodeData: NodeDataProps, SGraph: any, namespaceAll: boolean) => {
+    if (namespaceAll) {
+        SGraph.getNodes().forEach((dNode: any) => {
+            let node = dNode.getModel();
+            let info = nsNodeInfoHandle(node, nodeData);
+            node = {...node, ...info};
+            dNode.update(node);
+        });
+    } else {
+        SGraph.getNodes().forEach((dNode: any) => {
+            let node = dNode.getModel();
+            let info = detailNodeInfoHandle(node, nodeData);
+            node = {...node, ...info};
+            dNode.update(node);
+        });
+    }
+}
+
+export const updateEdge = (graphData: TopologyProps, metric: MetricType, metricData: any, SGraph: any, namespaceAll: boolean, showService: boolean) => {
+    let {nodes, edges} = graphData;
+    if (namespaceAll) {
+        SGraph.getEdges().forEach((dEdge: any) => {
+            let edgeModel = dEdge.getModel();
+            let metricList = _.filter(metricData, item => edgeFilter(item, edgeModel));
+            let metricValue = metricList.length > 0 ? _.chain(metricList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+            if (metric === 'rtt') {
+                metricValue = metricValue / 1000;
+            }
+            edgeModel[metric] = metricValue;
+            edges.splice(_.findIndex(edges, {source: edgeModel.source, target: edgeModel.target}), 1, edgeModel);
+            dEdge.update(edgeModel);
+        });
+    } else {
+        SGraph.getEdges().forEach((dEdge: any) => {
+            let edge = dEdge.getModel();
+            let sourceNode = _.find(nodes, {id: edge.source})!;
+            let targteNode = _.find(nodes, {id: edge.target})!;
+
+            let metricList = [];
+
+            if (externalTypes.indexOf(sourceNode.nodeType) > -1) {
+                let ip = sourceNode.id.substring(sourceNode.id.lastIndexOf('_') + 1, sourceNode.id.indexOf(':') > -1 ? sourceNode.id.indexOf(':') : sourceNode.id.length);
+                metricList = _.filter(metricData, item => item.src_namespace === sourceNode.namespace && item.src_ip === ip);
+            } else if (sourceNode.nodeType === 'pod') {
+                metricList = _.filter(metricData, item => item.src_namespace === sourceNode.namespace && item.src_pod === sourceNode.name);
+            } else if (sourceNode.nodeType === 'unknow') {
+                metricList = _.filter(metricData, item => item.src_namespace === sourceNode.namespace && item.src_workload_name === sourceNode.name && !item.src_pod);
+            } else if (workloadTypes.indexOf(sourceNode.nodeType) > -1) {
+                metricList = _.filter(metricData, item => item.src_namespace === sourceNode.namespace && item.src_workload_name === sourceNode.name);
+            }
+
+            if (externalTypes.indexOf(targteNode.nodeType) > -1) {
+                let ip = targteNode.id.substring(targteNode.id.lastIndexOf('_') + 1, targteNode.id.indexOf(':') > -1 ? targteNode.id.indexOf(':') : targteNode.id.length);
+                metricList = _.filter(metricList, item => item.dst_namespace === targteNode.namespace && item.dst_ip === ip);
+            } else if (targteNode.nodeType === 'pod') {
+                metricList = _.filter(metricList, item => item.dst_namespace === targteNode.namespace && item.dst_pod === targteNode.name);
+            } else if (targteNode.nodeType === 'unknow') {
+                metricList = _.filter(metricList, item => item.dst_namespace === targteNode.namespace && item.dst_workload_name === targteNode.name && !item.dst_pod);
+            } else if (workloadTypes.indexOf(targteNode.nodeType) > -1)  {
+                metricList = _.filter(metricList, item => item.dst_namespace === targteNode.namespace && item.dst_workload_name === targteNode.name);
+            }
+
+            if (showService && edge.service) {
+                metricList = _.filter(metricList, item => item.dst_service === edge.service);
+            }
+
+        
+            let metricValue = metricList.length > 0 ? _.chain(metricList).map(item => _.isNumber(_.last(item.values)) ? _.last(item.values) : 0).sum().value() : 0;
+            if (metric === 'rtt') {
+                metricValue = metricValue / 1000;
+            }
+            edge[metric] = metricValue;
+            edges.splice(_.findIndex(edges, {source: edge.source, target: edge.target}), 1, edge);
+            dEdge.update(edge);
+        });
+    }
 }

@@ -1,0 +1,92 @@
+trace:
+  key: sendmmsg
+  requests:
+    - name: "sendmmsg"
+      timestamp: 100000000
+      user_attributes:
+        latency: 5000
+        res: 2
+        data:
+          - "hex|1f0000000901010000010000000000000377777705626169647503636f6d00000100011f0000009211010000010000000000000377777705626169647503636f6d00001c0001"
+  responses:
+    - name: "recvfrom"
+      timestamp: 101000000
+      user_attributes:
+        latency: 20000
+        res: 90
+        data:
+          - "hex|0901818000010003000000000377777705626169647503636f6d0000010001c00c00050001000002dc000f0377777701610673686966656ec016c02b000100010000007d0004b46532bcc02b000100010000007d0004b46532f2"
+    - name: "recvfrom"
+      timestamp: 102000000
+      user_attributes:
+        latency: 30000
+        res: 115
+        data:
+          - "hex|9211818000010001000100000377777705626169647503636f6d00001c0001c00c00050001000002dc000f0377777701610673686966656ec016c02f00060001000000d6002d036e7331c02f1062616964755f646e735f6d6173746572c010893916f9000000050000000500278d0000000e10"
+
+  expects:
+    - Timestamp: 99995000
+      Values:
+        request_total_time: 1005000
+        connect_time: 0
+        request_sent_time: 5000
+        waiting_ttfb_time: 980000
+        content_download_time: 20000
+        request_io: 31
+        response_io: 90
+      Labels:
+        comm: "systemd-resolve"
+        pid: 577
+        request_tid: 577
+        response_tid: 577
+        src_ip: "127.0.0.1"
+        src_port: 60129
+        dst_ip: "127.0.0.53"
+        dst_port: 53
+        dnat_ip: ""
+        dnat_port: -1
+        container_id: ""
+        is_slow: false
+        is_server: false
+        protocol: "dns"
+        dns_rcode: 0
+        dns_id: 2305
+        dns_domain: "www.baidu.com."
+        dns_ip: "180.101.50.188"
+        is_error: false
+        error_type: 0
+        end_timestamp: 101000000
+        request_payload: ".............www.baidu.com....."
+        response_payload: ".............www.baidu.com..................www.a.shifen...+.......}...e2..+.......}...e2."
+    - Timestamp: 99995000
+      Values:
+        request_total_time: 2005000
+        connect_time: 0
+        request_sent_time: 5000
+        waiting_ttfb_time: 1970000
+        content_download_time: 30000
+        request_io: 31
+        response_io: 115
+      Labels:
+        comm: "systemd-resolve"
+        pid: 577
+        request_tid: 577
+        response_tid: 577
+        src_ip: "127.0.0.1"
+        src_port: 60129
+        dst_ip: "127.0.0.53"
+        dst_port: 53
+        dnat_ip: ""
+        dnat_port: -1
+        container_id: ""
+        is_slow: false
+        is_server: false
+        protocol: "dns"
+        dns_rcode: 0
+        dns_id: 37393
+        dns_domain: "www.baidu.com."
+        is_error: false
+        error_type: 0
+        end_timestamp: 102000000
+        request_payload: ".............www.baidu.com....."
+        response_payload: ".............www.baidu.com..................www.a.shifen.../.........-.ns1./.baidu_dns_master...9...........'......"

@@ -1,0 +1,77 @@
+
+// 设置元素宽高
+.mixin_wh(@width, @height) {
+    width: @width;
+    height: @height;
+}
+// 设置字体大小及颜色
+.mixin_fs(@fontSize, @color, @weight: normal) {
+    font-size: @fontSize;
+    color: @color;
+    font-weight: @weight;
+}
+// 设置border
+.mixin_border(@color, @borderRadius: 0) {
+    border: 1px solid @color;
+    border-radius: @borderRadius;
+}
+// 设置css3样式过度时长
+.mixin_transition(@time) {
+    -webkit-transition: @time;
+    transition: @time;
+}
+
+.mixin_ul() {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+.mixin_li(@liHeight, @liPadding, @cursor: default) {
+    width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: @liPadding;
+    line-height: @liHeight;
+    list-style-image: none;
+    list-style-type: none;
+    cursor: @cursor;
+}
+
+// 文本显示省略号
+.mixin_textOverhide {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/**
+ * flex 布局相关混入样式
+ */
+.mixin_flex(@layout: flex, @jst-content: center, @alg-items: center, @direction: unset, @wrap: wrap) {
+    display: @layout;
+    justify-content: @jst-content;
+    align-items: @alg-items;
+    flex-direction: @direction;
+    flex-wrap: @wrap;
+}
+
+
+.mixin_entrance_page_header {
+    .mixin_wh(100%, 72px);
+    background-color: var(--main-body-bg-color);
+    border-radius: 4px;
+    box-shadow: 0px 6px 6px 2px var(--home-header-box-shadow);
+    margin-bottom: 12px;
+    padding: 0 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    &_text {
+        font-size: 20px;
+        font-weight: 500;
+        color: var(--default-text-color);
+    }
+    &_operation {
+        display: flex;
+    }
+}

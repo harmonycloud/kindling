@@ -1,8 +1,0 @@
-#ifndef KINDLING_PROBE_CATCH_SIG_H
-#define KINDLING_PROBE_CATCH_SIG_H
-
-
-void sigsetup(void);
-
-
-#endif //KINDLING_PROBE_CATCH_SIG_H

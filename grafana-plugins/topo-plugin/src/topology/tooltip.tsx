@@ -1,3 +1,6 @@
+// Copyright (C) 2022 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 import React from 'react';
 import ReactDOM from 'react-dom';
 import G6 from '@antv/g6';
@@ -41,13 +44,13 @@ export const formatCount = (y: number) => {
 export const formatKMBT = (y: number) => {
     let yy: number = Math.abs(y);
     if (yy >= Math.pow(1024, 4)) {
-        return (yy / Math.pow(1024, 4)).toFixed(2) + 'TB';
+        return (yy / Math.pow(1024, 4)).toFixed(2) + 'TiB';
     } else if (yy >= Math.pow(1024, 3)) {
-        return (yy / Math.pow(1024, 3)).toFixed(2) + 'GB';
+        return (yy / Math.pow(1024, 3)).toFixed(2) + 'GiB';
     } else if (yy >= Math.pow(1024, 2)) {
-        return (yy / Math.pow(1024, 2)).toFixed(2) + 'MB';
+        return (yy / Math.pow(1024, 2)).toFixed(2) + 'MiB';
     } else if (yy >= 1024) {
-        return (yy / 1024).toFixed(2) + 'KB';
+        return (yy / 1024).toFixed(2) + 'KiB';
     } else if (yy < 1024 && yy >= 1) {
         return yy.toFixed(2) + 'B';
     } else if (yy < 1 && yy > 0) {

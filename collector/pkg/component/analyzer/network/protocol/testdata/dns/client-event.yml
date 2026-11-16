@@ -1,0 +1,25 @@
+# localhost:60129 -> http://localhost:53
+eventCommon:
+  # SYSCALL_EXIT
+  source: 2
+  # CAT_NET
+  category: 3
+  ctx:
+    thread_info:
+      pid: 577
+      tid: 577
+      uid: 101
+      gid: 103
+      comm: "systemd-resolve"
+    fd_info:
+        num: 12
+        # FD_IPV4_SOCK
+        type_fd: 3
+        # UDP
+        protocol: 2
+        # IsServer
+        role: false
+        sip: [16777343]
+        sport: 60129
+        dip: [889192575]
+        dport: 53

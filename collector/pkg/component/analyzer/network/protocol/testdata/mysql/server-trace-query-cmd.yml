@@ -1,0 +1,65 @@
+trace:
+  key: query-cmd
+  requests:
+    -
+      name: "recvfrom"
+      timestamp: 100000000
+      user_attributes:
+        latency: 2000
+        res: 24
+        data:
+          - "hex|14000000"
+          - "030001|SELECT * FROM dummy"
+  responses:
+    -
+      name: "sendto"
+      timestamp: 100020000
+      user_attributes:
+        latency: 15000
+        res: 160
+        data:
+          - "hex|0100000102"
+          - "hex|39000002"
+          - "03|def"
+          - "11|container-monitor"
+          - "05|dummy"
+          - "05|dummy"
+          - "04|name"
+          - "04|name"
+          - "hex|0c2d00b4000000fd0110000000"
+          - "hex|3b000003"
+          - "03|def"
+          - "11|conta"
+  expects:
+    -
+      Timestamp: 99998000
+      Values:
+        request_total_time: 22000
+        connect_time: 0
+        request_sent_time: 2000
+        waiting_ttfb_time: 5000
+        content_download_time: 15000
+        request_io: 24
+        response_io: 160
+      Labels:
+        comm: "mysqld"
+        pid: 903
+        request_tid: 2744
+        response_tid: 2744
+        src_ip: "127.0.0.1"
+        src_port: 49368
+        dst_ip: "127.0.0.1"
+        dst_port: 3306
+        dnat_ip: ""
+        dnat_port: -1
+        container_id: ""
+        is_slow: false
+        is_server: true
+        protocol: "mysql"
+        content_key: "select dummy *"
+        sql: "SELECT * FROM dummy"
+        request_payload: ".......SELECT * FROM dummy"
+        response_payload: ".....9....def.container-monitor.dummy.dummy.name.name.-...........;....def.conta"
+        is_error: false
+        error_type: 0
+        end_timestamp: 100020000

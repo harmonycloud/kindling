@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: metadata-provider
+  name: metadata-provider
+  namespace: kindling
+spec:
+  selector:
+    matchLabels:
+      k8s-app: metadata-provider
+  template:
+    metadata:
+      labels:
+        k8s-app: metadata-provider
+    spec:
+      serviceAccount: kindling-agent
+      containers:
+      - name: metadata-provider
+        image:  kindlingproject/metadata-provider:v1.0
+        command: ["./metadata-provider"]
+        args: 
+        - --http-port=9504
+        - --authType=serviceAccount
+        # - --kubeConfig=/root/.kube/config
+        imagePullPolicy: Always
+        securityContext:
+          privileged: true
+        resources:
+          limits:
+            memory: 1Gi
+          requests:
+            memory: 300Mi
+        ports:
+        - containerPort: 9504
+          protocol: TCP
+          name: http
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: metadata-provider
+  namespace: kindling
+spec:
+  ports:
+    - port: 9504
+      protocol: TCP
+      targetPort: http
+  selector:
+    k8s-app: metadata-provider

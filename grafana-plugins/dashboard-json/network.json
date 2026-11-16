@@ -72,7 +72,7 @@
         {
           "datasource": "Prometheus",
           "exemplar": true,
-          "expr": "sum(increase(kindling_tcp_retransmit_total{src_workload_name=~\"$source\", dst_workload_name=~\"$destination\"}[$__range]))",
+          "expr": "sum(increase(kindling_tcp_retransmit_total{src_workload_name=~\"$source\", dst_workload_name=~\"$destination\"}[$__interval]))",
           "interval": "",
           "intervalFactor": 5,
           "legendFormat": "Retransmit",
@@ -157,7 +157,7 @@
         {
           "datasource": "Prometheus",
           "exemplar": true,
-          "expr": "sum(increase(kindling_tcp_packet_loss_total{src_workload_name=~\"$source\", dst_workload_name=~\"$destination\"}[$__range]))",
+          "expr": "sum(increase(kindling_tcp_packet_loss_total{src_workload_name=~\"$source\", dst_workload_name=~\"$destination\"}[$__interval]))",
           "interval": "",
           "legendFormat": "Package Lost",
           "refId": "A"
@@ -326,7 +326,7 @@
         {
           "datasource": "Prometheus",
           "exemplar": true,
-          "expr": "sum(increase(kindling_topology_request_request_bytes_total{src_workload_name=~\"$source\", dst_workload_name=~\"$destination\"}[$__range]))",
+          "expr": "sum(increase(kindling_topology_request_request_bytes_total{src_workload_name=~\"$source\", dst_workload_name=~\"$destination\"}[$__interval]))",
           "interval": "",
           "legendFormat": "Sent Volume",
           "refId": "A"
@@ -334,7 +334,7 @@
         {
           "datasource": "Prometheus",
           "exemplar": true,
-          "expr": "sum(increase(kindling_topology_request_response_bytes_total{src_workload_name=~\"$source\", dst_workload_name=~\"$destination\"}[$__range]))",
+          "expr": "sum(increase(kindling_topology_request_response_bytes_total{src_workload_name=~\"$source\", dst_workload_name=~\"$destination\"}[$__interval]))",
           "interval": "",
           "legendFormat": "Received Volume",
           "refId": "B"

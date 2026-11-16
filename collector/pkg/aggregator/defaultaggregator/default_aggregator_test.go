@@ -1,11 +1,15 @@
+// Copyright (C) 2022-2023 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 package defaultaggregator
 
 import (
-	"github.com/Kindling-project/kindling/collector/model"
-	"github.com/Kindling-project/kindling/collector/pkg/aggregator"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/Kindling-project/kindling/collector/pkg/aggregator"
+	"github.com/Kindling-project/kindling/collector/pkg/model"
 )
 
 func TestConcurrentAggregator(t *testing.T) {
@@ -32,11 +36,11 @@ func TestConcurrentAggregator(t *testing.T) {
 	var duration int64 = 100
 	go func() {
 		for i := 0; i < runLoop; i++ {
-			gaugeValues := []*model.Gauge{
-				{"duration", duration},
+			metricValues := []*model.Metric{
+				{Name: "duration", Data: &model.Int{Value: duration}},
 			}
-			gaugeGroup := model.NewGaugeGroup("testGauge", labels, 0, gaugeValues...)
-			aggregatorInstance.Aggregate(gaugeGroup, labelSelectors)
+			dataGroup := model.NewDataGroup("testMetric", labels, 0, metricValues...)
+			aggregatorInstance.Aggregate(dataGroup, labelSelectors)
 			time.Sleep(time.Microsecond)
 		}
 		stopCh <- true
@@ -53,22 +57,22 @@ func TestConcurrentAggregator(t *testing.T) {
 			case <-ticker.C:
 				ret := aggregatorInstance.Dump()
 				for _, g := range ret {
-					for _, v := range g.Values {
+					for _, v := range g.Metrics {
 						if v.Name == "duration_sum" {
-							durationSum += v.Value
+							durationSum += v.GetInt().Value
 						} else if v.Name == "request_count" {
-							requestCount += v.Value
+							requestCount += v.GetInt().Value
 						}
 					}
 				}
 			case <-stopCh:
 				ret := aggregatorInstance.Dump()
 				for _, g := range ret {
-					for _, v := range g.Values {
+					for _, v := range g.Metrics {
 						if v.Name == "duration_sum" {
-							durationSum += v.Value
+							durationSum += v.GetInt().Value
 						} else if v.Name == "request_count" {
-							requestCount += v.Value
+							requestCount += v.GetInt().Value
 						}
 					}
 				}

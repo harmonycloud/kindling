@@ -1,0 +1,16 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  managedFields:
+  - apiVersion: rbac.authorization.k8s.io/v1
+    fieldsType: FieldsV1
+  name: kindling-agent
+  selfLink: /apis/rbac.authorization.k8s.io/v1/clusterrolebindings/kindling-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kindling-agent
+subjects:
+- kind: ServiceAccount
+  name: kindling-agent
+  namespace: kindling

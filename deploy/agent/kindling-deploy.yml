@@ -1,0 +1,156 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    k8s-app: kindling-agent
+  name: kindling-agent
+  namespace: kindling
+spec:
+  selector:
+    matchLabels:
+      k8s-app: kindling-agent
+  template:
+    metadata:
+      labels:
+        k8s-app: kindling-agent
+    spec:
+      serviceAccount: kindling-agent
+      containers:
+      - name: kindling-camera-front
+        image: kindlingproject/kindling-camera-front:latest
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: 300Mi
+          requests:
+            memory: 30Mi
+        ports:
+        - containerPort: 9504
+          protocol: TCP
+        volumeMounts:
+        - mountPath: /app/camera-front/node/settings.js
+          name: camera-front-config
+          subPath: settings.js
+        - name: shared-data
+          mountPath: /tmp/kindling
+      - name: kindling-agent
+        image: kindlingproject/kindling-agent:latest
+        imagePullPolicy: Always
+        securityContext:
+          privileged: true
+        resources:
+          limits:
+            memory: 1500Mi
+          requests:
+            memory: 300Mi
+        ports:
+        - containerPort: 9500
+          protocol: TCP
+        env:
+        - name: HOST_PROC
+          value: /host/proc
+        - name: PL_HOST_PATH
+          value: /host
+        - name: SYSDIG_HOST_ROOT
+          value: /host
+        - name: SNAPLEN
+          value: "1000"
+        - name: GOGC
+          value: "200"
+        - name: switch_agg_num
+          value: "2"
+        - name: MY_NODE_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: MY_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        readinessProbe:
+          exec:
+            command:
+              - cat
+              - /opt/kernel-support
+        volumeMounts:
+        - mountPath: /app/config
+          name: kindlingcfg
+        - name: shared-data
+          mountPath: /tmp/kindling
+        - mountPath: /sys
+          name: sys-vol
+        - mountPath: /etc/modprobe.d
+          name: modprobe-d
+          readOnly: true
+        - mountPath: /host/dev
+          name: dev-vol
+        - mountPath: /host/proc
+          name: proc-vol
+          readOnly: true
+        - mountPath: /host/etc
+          name: etc-vol
+          readOnly: true
+        - mountPath: /host/boot
+          name: boot-vol
+          readOnly: true
+        - mountPath: /host/lib/modules
+          name: modules-vol
+          readOnly: true
+        - mountPath: /host/usr
+          name: usr-vol
+          readOnly: true
+        - mountPath: /host/run
+          name: run-vol
+        - mountPath: /host/var/run
+          name: varrun-vol
+        - mountPath: /dev/shm
+          name: dshm
+      dnsPolicy: ClusterFirstWithHostNet
+      hostNetwork: true
+      hostPID: true
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 420
+          name: kindlingcfg
+        name: kindlingcfg
+      - configMap:
+          name: camera-front-config
+        name: camera-front-config
+      - name: shared-data
+        emptyDir: {}
+      - hostPath:
+          path: /etc/modprobe.d
+        name: modprobe-d
+      - emptyDir:
+          medium: Memory
+        name: dshm
+      - hostPath:
+          path: /dev
+        name: dev-vol
+      - hostPath:
+          path: /proc
+        name: proc-vol
+      - hostPath:
+          path: /etc
+        name: etc-vol
+      - hostPath:
+          path: /boot
+        name: boot-vol
+      - hostPath:
+          path: /lib/modules
+        name: modules-vol
+      - hostPath:
+          path: /usr
+        name: usr-vol
+      - hostPath:
+          path: /run
+        name: run-vol
+      - hostPath:
+          path: /var/run
+        name: varrun-vol
+      - hostPath:
+          path: /sys
+        name: sys-vol

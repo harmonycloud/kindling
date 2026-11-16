@@ -1,0 +1,31 @@
+# Copyright (C) 2022-2026 Kindling Project Authors.
+# SPDX-License-Identifier: Apache-2.0
+
+FROM centos:7
+
+WORKDIR /app/
+
+RUN sed -i 's|mirrorlist=|#mirrorlist=|g' /etc/yum.repos.d/CentOS-*.repo && \
+    sed -i 's|#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' /etc/yum.repos.d/CentOS-*.repo && \
+    yum clean all && \
+    yum makecache
+    
+RUN yum install -y qt5-qtbase-devel
+RUN yum install -y gdb
+COPY gdb_print.sh /app/
+RUN curl https://github.com/harmonycloud/agent-libs/releases/download/kindling-falcolib-probe-29721003629/kindling-falcolib-probe.tar.gz -o kindling-falcolib-probe.tar.gz
+
+COPY build-asyncprofiler.sh /app/
+RUN sh build-asyncprofiler.sh
+
+COPY start.sh /app/
+COPY kindling-probe-loader /usr/bin/kindling-probe-loader
+RUN chmod +x  /usr/bin/kindling-probe-loader
+
+COPY libso/* /usr/lib64/
+COPY libkindling-plugin.so /app/
+COPY libso/libkindling.so /lib64/
+COPY kindling-collector-config.yml /app/config/
+COPY kindling-collector /app/kindling-collector
+
+CMD ["sh", "start.sh"]

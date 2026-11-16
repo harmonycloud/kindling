@@ -1,0 +1,37 @@
+analyzers:
+  networkanalyzer:
+    event_channel_size: 10000
+    connect_timeout: 100
+    fd_reuse_timeout: 60
+    no_response_threshold: 120
+    response_slow_threshold: 500
+    enable_conntrack: false
+    ignore_dns_rcode3_error: true
+    conntrack_max_state_size: 131072
+    conntrack_rate_limit: 500
+    proc_root: /proc
+    protocol_parser: [ http, mysql, dns, redis, kafka, dubbo, rocketmq ]
+    url_clustering_method: alphabet
+    protocol_config:
+      - key: "http"
+        ports: [ 80 ]
+        payload_length: 200
+      - key: "dubbo"
+        payload_length: 80
+      - key: "mysql"
+        ports: [ 3306 ]
+        slow_threshold: 100
+      - key: "kafka"
+        ports: [ 9092 ]
+        slow_threshold: 100
+      - key: "redis"
+        ports: [ 6379 ]
+        slow_threshold: 100
+      - key: "dns"
+        ports: [ 53 ]
+        slow_threshold: 100
+        disable_discern: true
+      - key: "rocketmq"
+        slow_threshold: 500
+      - key: "NOSUPPORT"
+        ports: [ 1111 ]

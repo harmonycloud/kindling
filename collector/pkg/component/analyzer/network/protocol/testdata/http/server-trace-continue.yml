@@ -1,0 +1,127 @@
+trace:
+  # 0--100---104--108--------601 
+  #    READ  WRITE(100)
+  #               READ
+  #               READ
+  #               READ       WRITE(200)
+  #                          WRITE
+  key: continueData
+  requests:
+    # Request Head
+    -
+      name: "read"
+      timestamp: 100000000
+      user_attributes:
+        latency: 1000
+        res: 174
+        data:
+          - "POST /io/bigBody?sleep=1 HTTP/1.1\r\n"
+          - "User-Agent: curl/7.29.0\r\n"
+          - "Host: 10.0.2.4:19999\r\n"
+          - "accept: */*\r\n"
+          - "Content-Type: application/json\r\n"
+          - "Content-Length: 16082\r\n"
+          - "Expect: 100-continue\r\n"
+          - "\r\n"
+    # Request Body[10220]
+    -
+      name: "read"
+      timestamp: 108000000
+      user_attributes:
+        latency: 5000
+        res: 10220
+        data:
+          - "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          - "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    # Request Body[5840]
+    -
+      name: "read"
+      timestamp: 108100000
+      user_attributes:
+        latency: 3000
+        res: 5840
+        data:
+          - "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+          - "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    # Request Body[22]
+    -
+      name: "read"
+      timestamp: 108150000
+      user_attributes:
+        latency: 500
+        res: 22
+        data:
+          - "bbbbbbbbbbbbbbbbbbbbbb"
+  responses:
+    # Response Continue(100)
+    -
+      name: "write"
+      timestamp: 104000000
+      user_attributes:
+        latency: 1000
+        res: 44
+        data:
+          - "HTTP/1.1 100 Continue\r\n"
+          - "Content-Length: 0\r\n"
+          - "\r\n"
+    # Response Body[199]
+    -
+      name: "write"
+      timestamp: 601000000
+      user_attributes:
+        latency: 2000
+        res: 199
+        data:
+          - "HTTP/1.1 200 OK\r\n"
+          - "Connection: keep-alive\r\n"
+          - "Transfer-Encoding: chunked\r\n"
+          - "Content-Type: application/json\r\n"
+          - "Date: Mon, 12 Dec 2022 09:18:27 GMT\r\n"
+          - "\r\n"
+          - "35\r\n"
+          - "{\"success\":true,\"data\":\"sleep=1, body size is 16082\"}\r\n"
+    # Response Body[5]
+    -
+      name: "write"
+      timestamp: 601100000
+      user_attributes:
+        latency: 300
+        res: 5
+        data:
+          - "0\r\n"
+          - "\r\n"
+  expects:
+    -
+      Timestamp: 99999000
+      Values:
+        request_total_time: 501101000
+        connect_time: 0
+        request_sent_time: 8151000
+        waiting_ttfb_time: 492848000
+        content_download_time: 102000
+        request_io: 16256
+        response_io: 204
+      Labels:
+        comm: testdemo
+        pid: 12345
+        request_tid: 12346
+        response_tid: 12346
+        src_ip: "127.0.0.1"
+        src_port: 56266
+        dst_ip: "127.0.0.1"
+        dst_port: 9001
+        dnat_ip: ""
+        dnat_port: -1
+        container_id: ""
+        is_slow: true
+        is_server: true
+        protocol: "http"
+        is_error: false
+        error_type: 0
+        content_key: "/io/bigBody"
+        http_method: "POST"
+        http_url: "/io/bigBody?sleep=1"
+        http_status_code: 200
+        end_timestamp: 601100000
+        request_payload: "POST /io/bigBody?sleep=1 HTTP/1.1\r\nUser-Agent: curl/7.29.0\r\nHost: 10.0.2.4:19999\r\naccept: */*\r\nContent-Type: application/json\r\nContent-Length: 16082\r\nExpect: 100-continue\r\n\r\naaaaaaaaaaaaaaaaaaaaaaaaaa"
+        response_payload: "HTTP/1.1 200 OK\r\nConnection: keep-alive\r\nTransfer-Encoding: chunked\r\nContent-Type: application/json\r\nDate: Mon, 12 Dec 2022 09:18:27 GMT\r\n\r\n35\r\n{\"success\":true,\"data\":\"sleep=1, body size is 16082\"}\r\n0"

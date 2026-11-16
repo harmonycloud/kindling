@@ -1,0 +1,52 @@
+trace:
+  key: tcp_not_found
+  requests:
+    - name: "sendmsg"
+      timestamp: 100000000
+      user_attributes:
+        latency: 5000
+        res: 61
+        data:
+          - "hex|003b32f60100000100000000000013616c6572746d616e616765722d6d61696e2d3115616c6572746d616e616765722d6f706572617465640000ff0001"
+  responses:
+    - name: "recvfrom"
+      timestamp: 101000000
+      user_attributes:
+        latency: 20000
+        res: 136
+        data:
+          - "hex|008632f68583000100000001000013616c6572746d616e616765722d6d61696e2d3115616c6572746d616e616765722d6f706572617465640000ff0001000006000100000001004001610c726f6f742d73657276657273036e657400056e73746c640c766572697369676e2d67727303636f6d00789556c8000007080000038400093a8000015180"
+
+  expects:
+    - Timestamp: 99995000
+      Values:
+        request_total_time: 1005000
+        connect_time: 0
+        request_sent_time: 5000
+        waiting_ttfb_time: 980000
+        content_download_time: 20000
+        request_io: 61
+        response_io: 136
+      Labels:
+        comm: "systemd-resolve"
+        pid: 577
+        request_tid: 577
+        response_tid: 577
+        src_ip: "127.0.0.1"
+        src_port: 60129
+        dst_ip: "127.0.0.53"
+        dst_port: 53
+        dnat_ip: ""
+        dnat_port: -1
+        container_id: ""
+        is_slow: false
+        is_server: false
+        protocol: "dns"
+        dns_rcode: 3
+        dns_id: 13046
+        dns_domain: "alertmanager-main-1.alertmanager-operated."
+        is_error: true
+        error_type: 3
+        end_timestamp: 101000000
+        request_payload: ".;2............alertmanager-main-1.alertmanager-operated....."
+        response_payload: "..2............alertmanager-main-1.alertmanager-operated...............@.a.root-servers.net..nstld.verisign-grs.com.x.V...........:...Q."

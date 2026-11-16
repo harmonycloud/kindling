@@ -1,0 +1,43 @@
+
+@borderColor: #ebebeb;
+.log_table {
+    border: 1px solid @borderColor;
+    width: 100%;
+    table-layout: auto;
+    color: #4c4c4c;
+    transform: translateZ(0);
+    font-family: Consolas,Menlo,Monaco,“DejaVu Sans Mono”,“Courier New”,monospace;
+    tr {
+        line-height: 24px;
+        height: 24px;
+        position: relative;
+        word-break: break-all;
+        white-space: normal;
+        font-size: 12px;
+        border-bottom: 1px solid @borderColor;
+        td {
+            padding-left: 50px;
+            .index{
+                position: absolute;
+                left: 0;
+                background: #f8f8f8;
+                border-right: 1px solid @borderColor;
+                opacity: .89;
+                text-align: center;
+                width: 40px;
+                vertical-align: middle;
+                margin-right: 10px;
+                color: #4c4c4c;
+                display: inline-block;
+            }
+        }
+        &:hover{
+            background-color: #fefce8;
+        }
+    }
+    .log_expand{
+        text-align: center;
+        color: #43acf1;
+        cursor: pointer;
+    }
+}

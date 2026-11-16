@@ -1,0 +1,25 @@
+# localhost:41458 -> dubbo://localhost:30002
+eventCommon:
+  # SYSCALL_EXIT
+  source: 2
+  # CAT_NET
+  category: 3
+  ctx:
+    thread_info:
+      pid: 942
+      tid: 954
+      uid: 1000
+      gid: 1000
+      comm: "java"
+    fd_info:
+        num: 14
+        # FD_IPV4_SOCK
+        type_fd: 3
+        # TCP
+        protocol: 1
+        # IsServer
+        role: false
+        sip: [16777343]
+        sport: 41458
+        dip: [16777343]
+        dport: 30002

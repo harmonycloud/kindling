@@ -1,11 +1,11 @@
-# How the core kinndling team triage issues
+# How the core kindling team triage issues
 
 The main goal of issue triage is to categorize all incoming Kindling issues and make sure each issue has all basic information needed for anyone else to understand and be able to start working on it.
 
 > **Note:** This information is for Kindling project Maintainers, Owners, and Admins. If you are a Contributor, then you will not be able to perform most of the tasks in this topic.
 
 
-The core maintainers of the Kindling project are responsible for categorizing all incoming issues and delegating any critical or important issue to other maintainers. Currently one maintainer each week is responsible. Besides that part, triage provides an important way to contribute to an open source project.
+The core maintainers of the Kindling project are responsible for categorizing all incoming issues and delegating any critical or important issue to other maintainers. Currently, one maintainer each week is responsible. Besides that part, triage provides an important way to contribute to an open source project.
 
 Triage helps ensure issues resolve quickly by:
 
@@ -63,25 +63,25 @@ To get started with issue triage and finding issues that haven't been triaged yo
 
 ### Browse unlabeled issues
 
-The easiest and straight forward way of getting started and finding issues that haven't been triaged is to browse [unlabeled issues](https://github.com/Kindling-project/kindling/issues?q=is%3Aopen+is%3Aissue+no%3Alabel) and starting from the bottom and working yourself to the top.
+The easiest and straight forward way of getting started and finding issues that haven't been triaged is to browse [unlabeled issues](https://github.com/KindlingProject/kindling/issues?q=is%3Aopen+is%3Aissue+no%3Alabel) and starting from the bottom and working yourself to the top.
 
 ### Subscribe to all notifications
 
 The more advanced, but recommended way is to subscribe to all notifications from this repository which means that all new issues, pull requests, comments and important status changes are sent to your configured email address. Read this [guide](https://help.github.com/en/articles/watching-and-unwatching-repositories#watching-a-single-repository) for help with setting this up.
 
-It's highly recommended that you setup filters to automatically remove emails from the inbox and label/categorize them accordingly to make it easy for you to understand when you need to act upon a notification or where to look for finding issues that haven't been triaged etc.
+It's highly recommended that you set up filters to automatically remove emails from the inbox and label/categorize them accordingly to make it easy for you to understand when you need to act upon a notification or where to look for finding issues that haven't been triaged etc.
 
 ## 2. Ensure the issue contains basic information
 
-Before triaging an issue very far, make sure that the issue's author provided the standard issue information. This will help you make an educated recommendation on how to categorize the issue. The kindling project utilizes [GitHub issue templates](https://github.com/Kindling-project/kindling/issues/new/choose) to guide contributors to provide standard information that must be included for each type of template or type of issue.
+Before triaging an issue very far, make sure that the issue's author provided the standard issue information. This will help you make an educated recommendation on how to categorize the issue. The kindling project utilizes [GitHub issue templates](https://github.com/KindlingProject/kindling/issues/new/choose) to guide contributors to provide standard information that must be included for each type of template or type of issue.
 
 ### Standard issue information that must be included
 
-Given a certain issue template have been used by the issue author or depending how the issue is perceived by the issue triage responsible, the following should help you understand what standard issue information that must be included.
+Given a certain issue template have been used by the issue author or depending on how the issue is perceived by the issue triage responsible, the following should help you understand what standard issue information that must be included.
 
 #### Bug reports
 
-Should explain what happened, what was expected and how to reproduce it together with any additional information that may help giving a complete picture of what happened such as screenshots and any environment related information that's applicable and/or maybe related to the reported problem:
+Should explain what happened, what was expected and how to reproduce it together with any additional information that may help to give a complete picture of what happened such as screenshots and any environment related information that's applicable and/or maybe related to the reported problem:
 
 - Kindling agent version
 - Node OS version
@@ -116,13 +116,13 @@ To make it easier for everyone to understand and find issues they're searching f
 
 Depending on the issue, you might not feel all this information is needed. Use your best judgement. If you cannot triage an issue using what its author provided, explain kindly to the author that they must provide the above information to clarify the problem. Label issue with `needs more detail` and add any related `area/*` labels.
 
-If the author provides the standard information but you are still unable to triage the issue, request additional information. Do this kindly and politely because you are asking for more of the author's time.
+If the author provides the standard information, but you are still unable to triage the issue, request additional information. Do this kindly and politely because you are asking for more of the author's time.
 
 If the author does not respond to the requested information within the timespan of a week, close the issue with a kind note stating that the author can request for the issue to be reopened when the necessary information is provided.
 
 When you feel you have all the information needed you're ready to [categorizing the issue](#3-categorizing-an-issue).
 
-If you receive a notification with additional information provided but you are not anymore on issue triage and you feel you do not have time to handle it, you should delegate it to the current person on issue triage.
+If you receive a notification with additional information provided, but you are not anymore on issue triage, and you feel you do not have time to handle it, you should delegate it to the current person on issue triage.
 
 ## 3. Categorizing an issue
 
@@ -182,7 +182,7 @@ First, evaluate if the documentation makes sense to be included in the Kindling 
 
 - Is this something we want/can maintain as a project?
 - Is this referring to usage of some specific features and in that case is that a popular use case ?
-- If unsure, kindly and politely add a comment explaining that we would need [discussions](https://github.com/Kindling-project/kindling/discussions) to identify that lots of other users want/need this.
+- If unsure, kindly and politely add a comment explaining that we would need [discussions](https://github.com/KindlingProject/kindling/discussions) to identify that lots of other users want/need this.
 
 Second, label the issue `type/docs` and at least one `area/* label.
 
@@ -195,12 +195,12 @@ There's a minor typo/error/lack of information that adds a lot of confusion for 
 
 **Major error/lack of information:**
 
-1. Label the issue with  `beginner friendly`, if applicable, to signal that we find this important to fix and we would appreciate any help we can get from the community.
+1. Label the issue with  `beginner friendly`, if applicable, to signal that we find this important to fix, and we would appreciate any help we can get from the community.
 2. Move on to [prioritizing the issue](#4-prioritization-of-issues).
 
 ### Support requests
 
-1. Kindly and politely direct the issue author to the [github discussion](https://github.com/Kindling-project/kindling/discussions) and explain that GitHub is mainly used for tracking bugs and feature requests. If possible, it's usually a good idea to add some pointers to the issue author's question.
+1. Kindly and politely direct the issue author to the [github discussion](https://github.com/KindlingProject/kindling/discussions) and explain that GitHub is mainly used for tracking bugs and feature requests. If possible, it's usually a good idea to add some pointers to the issue author's question.
 2. Close the issue and label it with `type/question`.
 
 ##  4. Prioritization of issues
@@ -260,7 +260,7 @@ In case there is an uncertainty around the prioritization of an issue, please as
 
 ## 5. Requesting help from the discussions
 
-Depending on the issue and/or priority, it's always a good idea to consider signalling to the github discussions that help from discussions is appreciated and needed in case an issue is not prioritized to be worked on by maintainers. Use your best judgement. In general, requesting help from the discussions means that a contribution has a good chance of getting accepted and merged.
+Depending on the issue and/or priority, it's always a good idea to consider signalling to the GitHub discussions that help from discussions is appreciated and needed in case an issue is not prioritized to be worked on by maintainers. Use your best judgement. In general, requesting help from the discussions means that a contribution has a good chance of getting accepted and merged.
 
 1. Kindly and politely add a comment to signal to users subscribed to updates of the issue.
 
@@ -271,10 +271,10 @@ Depending on the issue and/or priority, it's always a good idea to consider sign
 
 ## Investigation of issues
 
-When an issue has all basic information provided, but the triage responsible haven't been able to reproduce the reported problem at a first glance, the issue is labeled [Needs investigation](https://github.com/Kindling-project/kindling/labels/needs%20investigation). Depending on the perceived severity the investigation will either be delegated to another maintainer for further investigation or put on hold until someone else (maintainer or contributor) picks it up and eventually starts investigating it.
+When an issue has all basic information provided, but the triage responsible haven't been able to reproduce the reported problem at a first glance, the issue is labeled [Needs investigation](https://github.com/KindlingProject/kindling/labels/needs%20investigation). Depending on the perceived severity the investigation will either be delegated to another maintainer for further investigation or put on hold until someone else (maintainer or contributor) picks it up and eventually starts investigating it.
 
 Investigating issues can be a very time consuming task, especially for the maintainers, given  the complexities of Kindling. There is a certain number of combinations that are more common than others, and these are in general easier for maintainers to investigate.
 
-For some other combinations it may not be possible at all for a maintainer to setup a proper test environment to investigate the issue. In these cases we really appreciate any help we can get from the community. Otherwise the issue is highly likely to be closed.
+For some other combinations it may not be possible at all for a maintainer to setup a proper test environment to investigate the issue. In these cases we really appreciate any help we can get from the community. Otherwise, the issue is highly likely to be closed.
 
-Even if you don't have the time or knowledge to investigate an issue we highly recommend that you upvote the issue if you happen to have the same problem. If you have further details that may help investigating the issue please provide as much information as possible.
+Even if you don't have the time or knowledge to investigate an issue we highly recommend that you upvote the issue if you happen to have the same problem. If you have further details that may help to investigate the issue please provide as much information as possible.

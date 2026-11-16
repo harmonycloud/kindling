@@ -1,0 +1,299 @@
+controller:
+  http:
+    enable: true
+    port: :9503
+  modules: ["profile"]
+
+receivers:
+  cgoreceiver:
+    subscribe:
+      - name: syscall_exit-writev
+        category: net
+      - name: syscall_exit-readv
+        category: net
+      - name: syscall_exit-write
+        category: net
+      - name: syscall_exit-read
+        category: net
+      - name: syscall_exit-sendto
+        category: net
+      - name: syscall_exit-recvfrom
+        category: net
+      - name: syscall_exit-sendmsg
+        category: net
+      - name: syscall_exit-recvmsg
+        category: net
+      - name: syscall_exit-sendmmsg
+        category: net
+      - name: kprobe-tcp_close
+      - name: kprobe-tcp_rcv_established
+      - name: kprobe-tcp_drop
+      - name: kprobe-tcp_retransmit_skb
+      - name: syscall_exit-connect
+      - name: kretprobe-tcp_connect
+      - name: kprobe-tcp_set_state
+      - name: tracepoint-procexit
+    process_filter:
+      # the length of a comm should be no more than 16
+      comms:
+        - "kindling-collec"
+        - "containerd"
+        - "dockerd"
+        - "containerd-shim"
+    # eBPF CPU stack sampling → Pyroscope. Empty url disables the feature.
+    # See docs/ebpf_cpu_profiling.md
+    ebpf_profiling:
+      endpoint:
+        # Example: "http://pyroscope:4040/"
+        url: ""
+        remote_timeout: 10s
+        min_backoff_period: 500ms
+        max_backoff_period: 30s
+        max_backoff_retries: 10
+      sender_worker_count: 2
+      sender_queue_capacity: 200
+      # Empty / omit = sample all processes (CAPTURE_ALL).
+      # Non-empty = only these host PIDs (PROFILING_ENABLED whitelist).
+      # Example: pids: [1234, 5678]
+      pids: []
+
+analyzers:
+  cpuanalyzer:
+    # sampling_interval is the sampling interval for the same url. The unit is second.
+    sampling_interval: 5
+    # segment_size defines how many segments(seconds) can be cached to wait for sending.
+    # The elder segments will be overwritten by the newer ones, so don't set it too low.
+    segment_size: 40
+    # edge_events_window_size is the size of the duration window that seats the edge events.
+    # The unit is second. The greater it is, the more data will be stored.
+    edge_events_window_size: 2
+    # java_trace_delete_interval is the interval for cleaning up expired data in javatraces.
+    # The unit is seconds.
+    java_trace_delete_interval: 20
+    # java_trace_expiration_time is the expiration time for data in javatraces.
+    # The unit is seconds.
+    java_trace_expiration_time: 120
+  tcpconnectanalyzer:
+    channel_size: 10000
+    wait_event_second: 10
+    # Whether add pid and command info in tcp-connect-metrics's labels
+    need_process_info: false
+  tcpmetricanalyzer:
+  networkanalyzer:
+    # how many events can be held in the channel simultaneously before it's considered full.
+    event_channel_size: 10000
+    connect_timeout: 100
+    # How many seconds to wait until we consider a request as complete.
+    fd_reuse_timeout: 2
+    # How many seconds to wait until we consider a request as no response.
+    no_response_threshold: 120
+    # How many milliseconds to wait until we consider a request-response as slow.
+    response_slow_threshold: 500
+    # Whether enable conntrack module to find pod's ip when calling service
+    enable_conntrack: true
+    # Whether to ignore DNS responses with RCODE 3 (Name Error) as errors. 
+    # Useful in Kubernetes clusters using ClusterFirst DNS policy, where KubeDNS may return RCODE 3 for public domains.
+    # Set to true to treat RCODE 3 as non-errors, default is false.
+    ignore_dns_rcode3_error: false
+    conntrack_max_state_size: 131072
+    conntrack_rate_limit: 500
+    proc_root: /proc
+    # The protocol parsers which is enabled
+    # When dissectors are enabled, agent will analyze the payload and enrich metric/trace with its content.
+    protocol_parser: [ http, mysql, dns, redis, kafka, rocketmq ]
+    # Which URL clustering method should be used to shorten the URL of HTTP request.
+    # This is useful for decrease the cardinality of URLs.
+    # Valid values: ["noparam", "alphabet", "blank"]
+    # - noparam: Only trim the trailing parameters behind the character '?'
+    # - alphabet: Trim the trailing parameters and Convert the segments
+    #             containing non-alphabetical characters to star(*)
+    # - blank: Turn endpoints to empty. This is used to reduce the cardinality as much as possible.
+    url_clustering_method: alphabet
+    # If the destination port of data is one of the followings, the protocol of such network request
+    # is set to the corresponding one. Note the program will try to identify the protocol automatically
+    # for the ports that are not in the lists, in which case the cpu usage will be increased much inevitably.
+    protocol_config:
+      - key: "http"
+        ports: [ 80 ]
+        # payload_length indicates the maximum size that payload can be fetched for target protocol
+        # The trace data sent may contain such payload, so the higher this value, the larger network traffic.
+        payload_length: 200
+        slow_threshold: 500
+      # The Dubbo parser is experimental now, so it is disabled by default. You could enable it by adding it
+      # to the "protocol_parser" array.
+      - key: "dubbo"
+        payload_length: 200
+      - key: "mysql"
+        ports: [ 3306 ]
+        slow_threshold: 100
+        disable_discern: false
+      - key: "kafka"
+        ports: [ 9092 ]
+        slow_threshold: 100
+      - key: "redis"
+        ports: [ 6379 ]
+        slow_threshold: 100
+      - key: "dns"
+        ports: [ 53 ]
+        slow_threshold: 100
+        disable_discern: true
+      - key: "rocketmq"
+        ports: [ 9876, 10911 ]
+        slow_threshold: 500
+  k8sinfoanalyzer:
+    # send_datagroup_interval is the datagroup sending interval.
+    # The unit is seconds.
+    send_datagroup_interval: 15
+
+processors:
+  k8smetadataprocessor:
+    # Set "enable" false if you want to run the agent in the non-Kubernetes environment.
+    # Otherwise, the agent will panic if it can't connect to the API-server.
+    enable: true
+    kube_auth_type: serviceAccount
+    kube_config_dir: /root/.kube/config
+    # GraceDeletePeriod controls the delay interval after receiving delete event.
+    # The unit is seconds, and the default value is 60 seconds.
+    # Should not be lower than 30 seconds.
+    grace_delete_period: 60
+    # enable_fetch_replicaset controls whether to fetch ReplicaSet information.
+    # The default value is false. It should be enabled if the ReplicaSet
+    # is used to control pods in the third-party CRD except for Deployment.
+    enable_fetch_replicaset: false
+    # metadata_provider is an independent program used to collect k8sMetadata from API-server and sync with every agent
+    # whether this configuration is enabled or not does not affect the output format
+    # once enabled, agent will fetch metadata from metadata_provider instead of communicate with API-server 
+    # that can reduce the pressure on API-server and transmitting less data 
+    metadata_provider_config:
+      # confirm that metedata_provider is deployed before you enable the configuration
+      # deploy metedata_provider by `kubectl create -f deploy/metadata-provider/metadata-provider-deploy.yml`
+      enable: false
+      # set `enable_trace` as true only if you need to debug the metadata from metadata_provider
+      # each k8sMetadata fetched from metadata_provider will be printed into console
+      enable_trace: false
+      # check service endpoint by `kubectl get endpoints metadata-provider  -n kindling``
+      endpoint: http://metadata-provider.kindling:9504
+  aggregateprocessor:
+    # Aggregation duration window size. The unit is second.
+    ticker_interval: 5
+    aggregate_kind_map:
+      request_total_time:
+        - kind: sum
+        - kind: avg
+          output_name: request_total_time_avg
+        - kind: count
+          output_name: request_count
+      request_io:
+        - kind: sum
+      response_io:
+        - kind: sum
+      kindling_tcp_srtt_microseconds:
+        - kind: last
+      kindling_tcp_retransmit_total:
+        - kind: sum
+      kindling_tcp_packet_loss_total:
+        - kind: sum
+      kindling_tcp_connect_total:
+        - kind: sum
+      kindling_tcp_connect_duration_nanoseconds_total:
+        - kind: sum
+    sampling_rate:
+      normal_data: 0
+      slow_data: 100
+      error_data: 100
+
+exporters:
+  cameraexporter:
+    # Options: ["file", "elasticsearch"]
+    storage: file
+    # Effective when storage is "file"
+    file_config:
+      storage_path: /tmp/kindling
+      # Max file count for each process
+      max_file_count_each_process: 50
+    # Effective when storage is "elasticsearch"
+    es_config:
+      es_host: http://10.10.10.10:9200
+      index_suffix: dev
+  otelexporter:
+    adapter_config:
+      need_trace_as_metric: true
+      need_pod_detail: true
+      store_external_src_ip: false
+      # When using otlp-grpc / stdout exporter , this option supports to
+      # send trace data in the format of ResourceSpan
+      need_trace_as_span: false
+    metric_aggregation_map:
+      kindling_entity_request_total: counter
+      kindling_entity_request_duration_nanoseconds_total: counter
+      kindling_entity_request_send_bytes_total: counter
+      kindling_entity_request_receive_bytes_total: counter
+      kindling_topology_request_total: counter
+      kindling_topology_request_duration_nanoseconds_total: counter
+      kindling_topology_request_request_bytes_total: counter
+      kindling_topology_request_response_bytes_total: counter
+      kindling_trace_request_duration_nanoseconds: gauge
+      kindling_tcp_srtt_microseconds: gauge
+      kindling_tcp_retransmit_total: counter
+      kindling_tcp_packet_loss_total: counter
+      kindling_tcp_connect_total: counter
+      kindling_tcp_connect_duration_nanoseconds_total: counter
+      kindling_k8s_workload_info: gauge
+    # Export data in the following ways: ["prometheus", "otlp", "stdout"]
+    # Note: configure the corresponding section to make everything ok
+    export_kind: prometheus
+    # Add labels to all metrics in the format of [key: value]
+    custom_labels:
+    prometheus:
+      port: :9500
+      # with_memory sets the memory behavior of the exporter. If this is
+      # true, the exporter will report metric instruments and label sets
+      # that were previously reported but not updated in the most recent
+      # interval.
+      with_memory: false
+      memcleanup:
+        # If set to true, prometheus server will restart every `restart_period`
+        # to free up memory.
+        enable: false
+        # Specifies the frequency (in hours) to restart the server.
+        # A value of 0 disables the restart.
+        restart_period: 12
+    otlp:
+      collect_period: 15s
+      # Note: DO NOT add the prefix "http://"
+      endpoint: 10.10.10.10:8080
+    stdout:
+      collect_period: 15s
+
+observability:
+  logger:
+    console_level: info # debug,info,warn,error,none
+    file_level: info
+    # debug_selector is used to filter debug message from different components
+    # 1. This filter will not take effect when there is no element in the debug_selector list
+    # 2. If the list is not empty, only the components contained in this list will print debug message
+    # 3. The name of each component is defined above, such as `receiver.cgoreceiver`, `exporter.otelexporter`, only the second part of the config name needed
+    # e.g debug_selector: ["cgoreceiver","otelexporter"]
+    debug_selector: []
+    file_rotation:
+      filename: agent.log
+      maxsize: 512 #MB
+      maxage: 30 #day
+      maxbackups: 5
+      localtime: true
+      compress: false
+  opentelemetry:
+    # Export data in the following ways: ["prometheus", "otlp", "stdout"]
+    # Note: configure the corresponding section to make everything ok
+    export_kind: stdout
+    prometheus:
+      port: :9501
+      # Self-metrics for special purpose
+      # "resource" for agent CPU and memory usage metricss
+      # extra_metrics: ["resource"]
+    otlp:
+      collect_period: 15s
+      # Note: DO NOT add the prefix "http://"
+      endpoint: 10.10.10.10:8080
+    stdout:
+      collect_period: 15s

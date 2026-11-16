@@ -1,0 +1,29 @@
+name: Metadata-provider-CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-latest-test:
+    if: github.repository == 'harmonycloud/kindling'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Set TAG
+        run: echo "TAG=latesttest" >> $GITHUB_ENV
+      - uses: actions/checkout@v3
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+      - name: Build and push
+        uses: docker/build-push-action@v3
+        with:
+          context: ${{ github.workspace }}/collector
+          file: ${{ github.workspace }}/collector/docker/Dockerfile-metadata-provider
+          push: true
+          tags: kindlingproject/metadata-provider:${{ env.TAG }}

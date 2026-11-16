@@ -39,79 +39,42 @@
       "pluginVersion": "7.1.1",
       "targets": [
         {
-          "expr": "increase(kindling_topology_request_total[$__range])",
+          "expr": "increase(kindling_topology_request_total{src_namespace=~\"$namespace\", src_workload_name=~\"$workload\"}[$__range]) or increase(kindling_topology_request_total{dst_namespace=~\"$namespace\", dst_workload_name=~\"$workload\"}[$__range])",
           "instant": true,
           "interval": "",
           "legendFormat": "",
           "refId": "A"
         },
         {
-          "expr": "increase(kindling_topology_request_duration_nanoseconds_total[$__range])",
-          "instant": true,
-          "interval": "",
-          "legendFormat": "",
-          "refId": "I"
-        },
-        {
-          "expr": "increase(kindling_topology_request_request_bytes_total[$__range])",
-          "hide": false,
+          "expr": "increase(kindling_topology_request_duration_nanoseconds_total{src_namespace=~\"$namespace\", src_workload_name=~\"$workload\"}[$__range]) or increase(kindling_topology_request_duration_nanoseconds_total{dst_namespace=~\"$namespace\", dst_workload_name=~\"$workload\"}[$__range])",
           "instant": true,
           "interval": "",
           "legendFormat": "",
           "refId": "B"
         },
         {
-          "expr": "increase(kindling_topology_request_response_bytes_total[$__range])",
-          "hide": false,
+          "expr": "sum (increase(kindling_entity_request_total{namespace=~\"$namespace\", workload_name=~\"$workload\"}[$__range])) by (namespace, workload_name, pod)",
           "instant": true,
           "interval": "",
           "legendFormat": "",
           "refId": "C"
         },
         {
-          "expr": "increase(kindling_entity_request_total[$__range])",
+          "expr": "sum (increase(kindling_entity_request_duration_nanoseconds_total{namespace=~\"$namespace\", workload_name=~\"$workload\"}[$__range])) by (namespace, workload_name, pod)",
           "instant": true,
           "interval": "",
           "legendFormat": "",
           "refId": "D"
         },
         {
-          "expr": "sum (increase(kindling_entity_request_duration_nanoseconds_total[$__range])) by (namespace, workload_name, pod)",
+          "expr": "sum(increase(kindling_entity_request_send_bytes_total{namespace=~\"$namespace\", workload_name=~\"$workload\"}[$__range])) by(namespace, workload_name, pod)",
           "instant": true,
           "interval": "",
           "legendFormat": "",
           "refId": "E"
         },
         {
-          "expr": "sum(increase(kindling_entity_request_send_bytes_total[$__range])) by(namespace, workload_name, pod)",
-          "instant": true,
-          "interval": "",
-          "legendFormat": "",
-          "refId": "G"
-        },
-        {
-          "expr": "sum(increase(kindling_entity_request_receive_bytes_total[$__range])) by(namespace, workload_name, pod)",
-          "instant": true,
-          "interval": "",
-          "legendFormat": "",
-          "refId": "H"
-        },
-        {
-          "expr": "increase(kindling_tcp_retransmit_total[$__range])",
-          "instant": true,
-          "interval": "",
-          "legendFormat": "",
-          "refId": "J"
-        },
-        {
-          "expr": "avg_over_time(kindling_tcp_srtt_microseconds[$__range])",
-          "instant": true,
-          "interval": "",
-          "legendFormat": "",
-          "refId": "K"
-        },
-        {
-          "expr": "increase(kindling_tcp_packet_loss_total[$__range])",
+          "expr": "sum(increase(kindling_entity_request_receive_bytes_total{namespace=~\"$namespace\", workload_name=~\"$workload\"}[$__range])) by(namespace, workload_name, pod)",
           "instant": true,
           "interval": "",
           "legendFormat": "",
@@ -128,7 +91,51 @@
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "kube-system",
+          "value": "kube-system"
+        },
+        "datasource": "Prometheus",
+        "definition": "kindling_topology_request_total",
+        "hide": 0,
+        "includeAll": true,
+        "label": "Namespace",
+        "multi": false,
+        "name": "namespace",
+        "options": [],
+        "query": {
+          "query": "kindling_topology_request_total",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": ".*namespace=\\\"(.*?)\\\".*",
+        "skipUrlSync": false,
+        "sort": 4,
+        "type": "query"
+      },
+      {
+        "datasource": "Prometheus",
+        "definition": "label_values(kindling_k8s_workload_info{namespace=\"$namespace\"}, workload_name)",
+        "hide": 0,
+        "includeAll": false,
+        "label": "workload",
+        "multi": false,
+        "name": "workload",
+        "options": [],
+        "query": {
+          "query": "label_values(kindling_k8s_workload_info{namespace=\"$namespace\"}, workload_name)",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
   },
   "time": {
     "from": "now-30m",

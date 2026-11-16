@@ -1,0 +1,206 @@
+# 0--100---200--300-----500---600------700----800----900
+#    WRITE READ
+#               WRITE   READ
+#                             WRITE    READ
+#                                            WRITE   READ
+trace:
+  key: commit
+  requests:
+    -
+      name: "recvfrom"
+      timestamp: 100000000
+      user_attributes:
+        latency: 100
+        res: 21
+        data:
+          - "hex|11000000"
+          - "03|SET autocommit=0"
+    -
+      name: "recvfrom"
+      timestamp: 100000300
+      user_attributes:
+        latency: 100
+        res: 53
+        data:
+          - "hex|31000000"
+          - "03|INSERT INTO student  ( name )  VALUES  ( 'aaa' )"
+    -
+      name: "recvfrom"
+      timestamp: 100000600
+      user_attributes:
+        latency: 30
+        res: 11
+        data:
+          - "hex|31000000"
+          - "03|commit"
+    -
+      name: "recvfrom"
+      timestamp: 100000800
+      user_attributes:
+        latency: 40
+        res: 21
+        data:
+          - "hex|11000000"
+          - "03|SET autocommit=1"
+  responses:
+    -
+      name: "sendto"
+      timestamp: 100000200
+      user_attributes:
+        latency: 50
+        res: 11
+        data:
+          - "hex|0700000100000000000000"
+    -
+      name: "sendto"
+      timestamp: 100000500
+      user_attributes:
+        latency: 30
+        res: 11
+        data:
+          - "hex|070000010001f101000000"
+    -
+      name: "sendto"
+      timestamp: 100000900
+      user_attributes:
+        latency: 40
+        res: 11
+        data:
+          - "hex|0700000100000000000000"
+    -
+      name: "sendto"
+      timestamp: 100000700
+      user_attributes:
+        latency: 10
+        res: 11
+        data:
+          - "hex|0700000100000002000000"    
+  expects:
+    -
+      Timestamp: 99999900
+      Values:
+        request_total_time: 300
+        connect_time: 0
+        request_sent_time: 100
+        waiting_ttfb_time: 150
+        content_download_time: 50
+        request_io: 21
+        response_io: 11
+      Labels:
+        comm: "mysqld"
+        pid: 903
+        request_tid: 2744
+        response_tid: 2744
+        src_ip: "127.0.0.1"
+        src_port: 49368
+        dst_ip: "127.0.0.1"
+        dst_port: 3306
+        dnat_ip: ""
+        dnat_port: -1
+        container_id: ""
+        is_slow: false
+        is_server: true
+        protocol: "mysql"
+        content_key: "set *"
+        sql: "SET autocommit=0"
+        request_payload: ".....SET autocommit=0"
+        response_payload: "..........."
+        is_error: false
+        error_type: 0
+        end_timestamp: 100000200
+    -
+      Timestamp: 100000200
+      Values:
+        request_total_time: 300
+        connect_time: 0
+        request_sent_time: 100
+        waiting_ttfb_time: 170
+        content_download_time: 30
+        request_io: 53
+        response_io: 11
+      Labels:
+        comm: "mysqld"
+        pid: 903
+        request_tid: 2744
+        response_tid: 2744
+        src_ip: "127.0.0.1"
+        src_port: 49368
+        dst_ip: "127.0.0.1"
+        dst_port: 3306
+        dnat_ip: ""
+        dnat_port: -1
+        container_id: ""
+        is_slow: false
+        is_server: true
+        protocol: "mysql"
+        content_key: "insert student *"
+        sql: "INSERT INTO student  ( name )  VALUES  ( 'aaa' )"
+        request_payload: "1....INSERT INTO student  ( name )  VALUES  ( 'aaa' )"
+        response_payload: "..........."
+        is_error: false
+        error_type: 0
+        end_timestamp: 100000500
+    -
+      Timestamp: 100000570
+      Values:
+        request_total_time: 130
+        connect_time: 0
+        request_sent_time: 30
+        waiting_ttfb_time: 90
+        content_download_time: 10
+        request_io: 11
+        response_io: 11
+      Labels:
+        comm: "mysqld"
+        pid: 903
+        request_tid: 2744
+        response_tid: 2744
+        src_ip: "127.0.0.1"
+        src_port: 49368
+        dst_ip: "127.0.0.1"
+        dst_port: 3306
+        dnat_ip: ""
+        dnat_port: -1
+        container_id: ""
+        is_slow: false
+        is_server: true
+        protocol: "mysql"
+        content_key: "commit *"
+        sql: "commit"
+        request_payload: "1....commit"
+        response_payload: "..........."
+        is_error: false
+        error_type: 0
+        end_timestamp: 100000700
+    -
+      Timestamp: 100000760
+      Values:
+        request_total_time: 140
+        connect_time: 0
+        request_sent_time: 40
+        waiting_ttfb_time: 60
+        content_download_time: 40
+        request_io: 21
+        response_io: 11
+      Labels:
+        comm: "mysqld"
+        pid: 903
+        request_tid: 2744
+        response_tid: 2744
+        src_ip: "127.0.0.1"
+        src_port: 49368
+        dst_ip: "127.0.0.1"
+        dst_port: 3306
+        dnat_ip: ""
+        dnat_port: -1
+        container_id: ""
+        is_slow: false
+        is_server: true
+        protocol: "mysql"
+        content_key: "set *"
+        sql: "SET autocommit=1"
+        request_payload: ".....SET autocommit=1"
+        response_payload: "..........."
+        is_error: false
+        error_type: 0
+        end_timestamp: 100000900

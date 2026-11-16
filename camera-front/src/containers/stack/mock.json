@@ -1,0 +1,191 @@
+[
+    {
+    	"threadId": 24,
+        "threadName": "http-nio-9998-BlockPoller",
+        "flames":
+        [
+            {
+            	"from": 1661995368081155603,
+                "to": 1661995368081395697,
+                "name": "org/apache/tomcat/util/net/NioBlockingSelector$BlockPoller.run",
+                "child":
+                [
+                    {
+                        "from": 1661995368081155603,
+                        "to": 1661995368081205603,
+                        "name": "org/apache/tomcat/util/net/NioBlockingSelector$BlockPoller.run",
+                        "child": []
+                    }, 
+                    {
+                        "from": 1661995368081255603,
+                        "to": 1661995368081390697,
+                        "name": "org/apache/tomcat/util/net/NioBlockingSelector$BlockPoller.run",
+                        "child": []
+                    }
+                ]
+            }
+        ]
+    }, 
+    {
+    	"threadId": 25,
+        "threadName": "http-nio-9997-BlockPoller",
+        "flames":
+        [
+            {
+            	"from": 1661995368081155603,
+                "to": 1661995368081395697,
+                "name": "org/apache/tomcat/util/net/NioBlockingSelector$BlockPoller.run",
+                "child":
+                [
+                    {
+                        "from": 1661995368081155603,
+                        "to": 1661995368081205603,
+                        "name": "org/apache/tomcat/util/net/NioBlockingSelector$BlockPoller.run",
+                        "child": [
+                            {
+                                "from": 1661995368081155603,
+                                "to": 1661995368081185603,
+                                "name": "org/apache/tomcat/util/net/xxxx.run"
+                            }, {
+                                "from": 1661995368081186603,
+                                "to": 1661995368081200603,
+                                "name": "org/apache/tomcat/util/net/xxxx.run"
+                            }
+                        ]
+                    }, 
+                    {
+                        "from": 1661995368081215603,
+                        "to": 1661995368081225903,
+                        "name": "org/apache/tomcat/util/net/XXX.run",
+                        "child": []
+                    }, 
+                    {
+                        "from": 1661995368081255603,
+                        "to": 1661995368081395697,
+                        "name": "org/apache/tomcat/util/net/NioBlockingSelector$BlockPoller.run",
+                        "child": [
+                            {
+                                "from": 1661995368081255603,
+                                "to": 1661995368081305603,
+                                "name": "org/apache/tomcat/util/net/xxx.run",
+                                "child": [
+                                    {
+                                        "from": 1661995368081255703,
+                                        "to": 1661995368081302603,
+                                        "name": "org/apache/tomcat/util/net/xxxx.run"
+                                    }
+                                ]
+                            }, {
+                                "from": 1661995368081315603,
+                                "to": 1661995368081395697,
+                                "name": "org/apache/tomcat/util/net/xxx.run",
+                                "child": [
+                                    {
+                                        "from": 1661995368081315603,
+                                        "to": 1661995368081390697,
+                                        "name": "org/apache/tomcat/util/net/xxxx.run",
+                                        "child": [
+                                            {
+                                                "from": 1661995368081319603,
+                                                "to": 1661995368081380697,
+                                                "name": "org/apache/tomcat/util/net/xxxx.run",
+                                                "child": [
+                                                    {
+                                                        "from": 1661995368081322603,
+                                                        "to": 1661995368081360697,
+                                                        "name": "org/apache/tomcat/util/net/xxxx.run"
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }, 
+    {
+    	"threadId": 26,
+        "threadName": "http-nio-9996-BlockPoller",
+        "flames":
+        [
+            {
+            	"from": 1661995368081155603,
+                "to": 1661995368081395697,
+                "name": "org/apache/tomcat/util/net/NioBlockingSelector$BlockPoller.run",
+                "child":
+                [
+                    {
+                        "from": 1661995368081155603,
+                        "to": 1661995368081205603,
+                        "name": "org/apache/tomcat/util/net/NioBlockingSelector$BlockPoller.run",
+                        "child": [
+                            {
+                                "from": 1661995368081155603,
+                                "to": 1661995368081185603,
+                                "name": "org/apache/tomcat/util/net/xxxx.run"
+                            }, {
+                                "from": 1661995368081186603,
+                                "to": 1661995368081200603,
+                                "name": "org/apache/tomcat/util/net/xxxx.run"
+                            }
+                        ]
+                    }, 
+                    {
+                        "from": 1661995368081215603,
+                        "to": 1661995368081225903,
+                        "name": "org/apache/tomcat/util/net/XXX.run",
+                        "child": []
+                    }, 
+                    {
+                        "from": 1661995368081255603,
+                        "to": 1661995368081395697,
+                        "name": "org/apache/tomcat/util/net/NioBlockingSelector$BlockPoller.run",
+                        "child": [
+                            {
+                                "from": 1661995368081255603,
+                                "to": 1661995368081305603,
+                                "name": "org/apache/tomcat/util/net/xxx.run",
+                                "child": [
+                                    {
+                                        "from": 1661995368081255703,
+                                        "to": 1661995368081302603,
+                                        "name": "org/apache/tomcat/util/net/xxxx.run"
+                                    }
+                                ]
+                            }, {
+                                "from": 1661995368081315603,
+                                "to": 1661995368081395697,
+                                "name": "org/apache/tomcat/util/net/xxx.run",
+                                "child": [
+                                    {
+                                        "from": 1661995368081315603,
+                                        "to": 1661995368081390697,
+                                        "name": "org/apache/tomcat/util/net/xxxx.run",
+                                        "child": [
+                                            {
+                                                "from": 1661995368081319603,
+                                                "to": 1661995368081380697,
+                                                "name": "org/apache/tomcat/util/net/xxxx.run",
+                                                "child": [
+                                                    {
+                                                        "from": 1661995368081322603,
+                                                        "to": 1661995368081360697,
+                                                        "name": "org/apache/tomcat/util/net/xxxx.run"
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+]

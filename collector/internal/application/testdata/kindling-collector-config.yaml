@@ -1,0 +1,73 @@
+analyzers:
+  mockanalyzer:
+    num: 10
+  networkanalyzer:
+    # If the destination port of data is one of the followings, the protocol of such network request
+    # is set to the corresponding one. Note the program will try to identify the protocol automatically
+    # for the ports that are not in the lists, in which case the cpu usage will be increased much inevitably.
+    protocol_config:
+      - key: "http"
+        ports: [ 80, 8080 ]
+        # payload_length indicates the maximum size that payload can be fetched for target protocol
+        # The trace data sent may contain such payload, so the higher this value, the larger network traffic.
+        payload_length: 100
+        slow_threshold: 200
+    url_clustering_method: blank
+    # Whether to ignore DNS responses with RCODE 3 (Name Error) as errors. 
+    # Useful in Kubernetes clusters using ClusterFirst DNS policy, where KubeDNS may return RCODE 3 for public domains.
+    # Set to true to treat RCODE 3 as non-errors, default is false.
+    ignore_dns_rcode3_error: true
+processors:
+  k8smetadataprocessor:
+    # Set "enable" false if you want to run the agent in the non-Kubernetes environment.
+    # Otherwise, the agent will panic if it can't connect to the API-server.
+    enable: false
+    kube_auth_type: kubeConfig
+    kube_config_dir: /opt/.kube/config
+    # GraceDeletePeriod controls the delay interval after receiving delete event.
+    # The unit is seconds, and the default value is 60 seconds.
+    # Should not be lower than 30 seconds.
+    grace_delete_period: 30
+    # enable_fetch_replicaset controls whether to fetch ReplicaSet information.
+    # The default value is false. It should be enabled if the ReplicaSet
+    # is used to control pods in the third-party CRD except for Deployment.
+    enable_fetch_replicaset: true
+  nodemetricprocessor:
+receivers:
+  cgoreceiver:
+    subscribe:
+      - name: syscall_exit-writev
+        category: net
+      - name: syscall_exit-readv
+        category: net
+      - name: syscall_exit-write
+        category: net
+      - name: syscall_exit-read
+        category: net
+      - name: syscall_exit-sendto
+        category: net
+      - name: syscall_exit-recvfrom
+        category: net
+      - name: syscall_exit-sendmsg
+        category: net
+      - name: syscall_exit-recvmsg
+        category: net
+      - name: syscall_exit-sendmmsg
+        category: net
+      - name: kprobe-tcp_close
+      - name: kprobe-tcp_rcv_established
+      - name: kprobe-tcp_drop
+      - name: kprobe-tcp_retransmit_skb
+      - name: syscall_exit-connect
+      - name: kretprobe-tcp_connect
+      - name: kprobe-tcp_set_state
+      - name: tracepoint-procexit
+    process_filter:
+      # the length of a comm should be no more than 16
+      comms:
+        - "kindling-collec"
+        - "containerd"
+        - "dockerd"
+        - "containerd-shim"
+        - "filebeat"
+        - "java"

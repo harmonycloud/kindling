@@ -1,0 +1,143 @@
+.light-theme {
+    /* 字体大小 */
+    .s-fs-14 { font-size: 14px; }
+
+    /* margins */
+    .f-mb0 { margin-bottom: 0; }
+
+    .f-mb6 { margin-bottom: 6px; }
+    .f-mr6 { margin-right: 6px; }
+    .f-ml6 { margin-left: 6px; }
+    .f-mt6 { margin-top: 6px; }
+
+    .f-mb8 { margin-bottom: 8px; }
+    .f-mr8 { margin-right: 8px; }
+    .f-ml8 { margin-left: 8px; }
+    .f-mt8 { margin-top: 8px; }
+
+    .f-mb10 { margin-bottom: 10px; }
+    .f-mr10 { margin-right: 10px; }
+    .f-ml10 { margin-left: 10px; }
+    .f-mt10 { margin-top: 10px; }
+
+    .f-mb12 { margin-bottom: 12px; }
+    .f-mr12 { margin-right: 12px; }
+    .f-ml12 { margin-left: 12px; }
+    .f-mt12 { margin-top: 12px; }
+
+    .f-mb20 { margin-bottom: 20px; }
+    .f-mr20 { margin-right: 20px; }
+    .f-ml20 { margin-left: 20px; }
+    .f-mt20 { margin-top: 20px; }
+
+    .f-mb24 { margin-bottom: 24px; }
+    .f-mr24 { margin-right: 24px; }
+    .f-ml24 { margin-left: 24px; }
+    .f-mt24 { margin-top: 24px; }
+
+    .f-padding10 { padding: 10px; }
+    .f-padding20 { padding: 20px; }
+    .f-paddingl-20 { padding-left: 20px; }
+
+    // f_tabs
+    .f_tabs {
+        .ant-tabs-tab {
+            padding: 12px;
+        }
+        .ant-tabs-tab + .ant-tabs-tab {
+            margin: 0 0 0 16px;
+        }
+    }
+
+    // flex
+    // .flex {
+    //     display: flex;
+    //     justify-content: space-between;
+    // }
+    .flex {
+        display: flex;
+        align-items: center;
+    }
+    .flex-justify {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .flex-end {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+
+    .span_a {
+        color: var(--span-a-color);
+        pointer-events: all;
+        text-decoration: none;
+        background-color: transparent;
+        outline: none;
+        cursor: pointer;
+        -webkit-transition: color 0.3s;
+        transition: color 0.3s;
+        -webkit-text-decoration-skip: objects;
+        &:hover {
+            color: var(--span-a-active-color);
+        }
+        &:active {
+            color: var(--span-a-active-color);
+        }
+        &:hover, &:active {
+            text-decoration: none;
+            outline: 0;
+        }
+        &.disable {
+            color: var(--span-a-disable-color);
+            cursor: not-allowed;
+        }
+    }
+    .a_error{
+        color: var(--a-danger-color);
+    }
+    .a_error:hover{
+        color: var(--a-danger-hover-color);
+    }
+    // 默认链接颜色
+    .a_primary{
+        color: var(--a-primary-color);
+    }
+    .a_primary:hover{
+        color: var(--a-primary-hover-color);
+    }
+
+    /*滚动条样式优化*/
+    /*整体部分*/
+    ::-webkit-scrollbar
+    {
+        width: 6px;
+        height:6px;
+    }
+    /*滑动轨道*/
+    ::-webkit-scrollbar-track
+    {
+        -webkit-box-shadow: inset 0 0 5px rgba(0,0,0,0);
+        border-radius: 0px;
+        background: rgba(0,0,0,0);
+    }
+    /*滑块*/
+    ::-webkit-scrollbar-thumb
+    {
+        border-radius: 5px;
+        -webkit-box-shadow: inset 0 0 5px var(--disabled-text-color);
+        background: var(--disabled-text-color);
+    }
+    /*滑块效果*/
+    ::-webkit-scrollbar-thumb:hover
+    {
+        border-radius: 5px;
+        -webkit-box-shadow: inset 0 0 5px var(--header-option-text-color);
+        background: var(--header-option-text-color);
+    }
+    /*边角，即两个滚动条的交汇处*/
+    ::-webkit-scrollbar-corner {
+        background-color: rgba(0,0,0,0); // 颜色
+    }
+}

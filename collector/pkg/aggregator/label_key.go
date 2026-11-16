@@ -1,8 +1,13 @@
+// Copyright (C) 2022 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 package aggregator
 
 import (
-	"github.com/Kindling-project/kindling/collector/model"
+	"sort"
 	"strconv"
+
+	"github.com/Kindling-project/kindling/collector/pkg/model"
 )
 
 type vType string
@@ -44,7 +49,11 @@ func (s *LabelSelectors) GetLabelKeys(labels *model.AttributeMap) *LabelKeys {
 	return keys
 }
 
-const maxLabelKeySize = 35
+func (s *LabelSelectors) AppendSelectors(selectors ...LabelSelector) {
+	s.selectors = append(s.selectors, selectors...)
+}
+
+const maxLabelKeySize = 37
 
 type LabelKeys struct {
 	// LabelKeys will be used as key of map, so it is must be an array instead of a slice.
@@ -52,10 +61,23 @@ type LabelKeys struct {
 	keys [maxLabelKeySize]LabelKey
 }
 
+func (k *LabelKeys) Len() int {
+	return len(k.keys)
+}
+
+func (k *LabelKeys) Swap(i, j int) {
+	k.keys[i], k.keys[j] = k.keys[j], k.keys[i]
+}
+
+func (k *LabelKeys) Less(i, j int) bool {
+	return k.keys[i].Name < k.keys[j].Name
+}
+
 type LabelKey struct {
 	Name  string
 	Value string
 	VType vType
+	sort.Interface
 }
 
 func NewLabelKeys(keys ...LabelKey) *LabelKeys {
@@ -83,4 +105,26 @@ func (k *LabelKeys) GetLabels() *model.AttributeMap {
 		}
 	}
 	return ret
+}
+
+// GetLabelsKeys TODO Sort before you real need to use this key
+func GetLabelsKeys(attributeMap *model.AttributeMap) *LabelKeys {
+	keys := &LabelKeys{}
+	labels := attributeMap.GetValues()
+	index := 0
+	for k, v := range labels {
+		keys.keys[index].Name = k
+		keys.keys[index].Value = v.ToString()
+		switch v.Type() {
+		case model.StringAttributeValueType:
+			keys.keys[index].VType = StringType
+		case model.IntAttributeValueType:
+			keys.keys[index].VType = IntType
+		case model.BooleanAttributeValueType:
+			keys.keys[index].VType = BooleanType
+		}
+		index++
+	}
+	sort.Sort(keys)
+	return keys
 }

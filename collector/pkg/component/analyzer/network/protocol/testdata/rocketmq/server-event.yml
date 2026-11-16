@@ -1,0 +1,25 @@
+# localhost:45678 -> http://localhost:9876
+eventCommon:
+  # SYSCALL_EXIT
+  source: 2
+  # CAT_NET
+  category: 3
+  ctx:
+    thread_info:
+      pid: 12346
+      tid: 12347
+      uid: 9999
+      gid: 1000
+      comm: "rocketmq-server"
+    fd_info:
+        num: 15
+        # FD_IPV4_SOCK
+        type_fd: 3
+        # TCP
+        protocol: 1
+        # IsServer
+        role: false
+        sip: [16777343]
+        sport: 45678
+        dip: [16777343]
+        dport: 9876

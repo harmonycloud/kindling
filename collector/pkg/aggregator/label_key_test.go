@@ -1,9 +1,13 @@
+// Copyright (C) 2022 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 package aggregator
 
 import (
-	"github.com/Kindling-project/kindling/collector/model"
 	"reflect"
 	"testing"
+
+	"github.com/Kindling-project/kindling/collector/pkg/model"
 )
 
 func TestLabelSelectors_GetLabelKeys(t *testing.T) {

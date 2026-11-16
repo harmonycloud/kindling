@@ -1,0 +1,25 @@
+# localhost:49368 -> localhost:1111
+eventCommon:
+  # SYSCALL_EXIT
+  source: 2
+  # CAT_NET
+  category: 3
+  ctx:
+    thread_info:
+      pid: 100
+      tid: 101
+      uid: 1
+      gid: 1
+      comm: "test"
+    fd_info:
+        num: 4
+        # FD_IPV4_SOCK
+        type_fd: 3
+        # TCP
+        protocol: 1
+        # IsServer
+        role: true
+        sip: [16777343]
+        sport: 49368
+        dip: [16777343]
+        dport: 1111

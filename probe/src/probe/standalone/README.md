@@ -1,2 +1,0 @@
-# Stirling Standalone
-

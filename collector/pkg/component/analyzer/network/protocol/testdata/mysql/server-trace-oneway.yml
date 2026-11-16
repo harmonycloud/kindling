@@ -1,0 +1,14 @@
+trace:
+  key: oneway
+  requests:
+    -
+      name: "recvfrom"
+      timestamp: 100000000
+      user_attributes:
+        latency: 2000
+        res: 24
+        data:
+          - "hex|14000000"
+          - "hex|01"
+  expects:
+    # No Result, Ignore it.

@@ -1,0 +1,68 @@
+name: KINDLING-RELEASE
+
+on:
+  push:
+    tags:
+    - 'v*'
+
+jobs:
+  publish:
+    if: github.repository == 'harmonycloud/kindling'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Set RELEASE
+        run: echo "RELEASE=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      - uses: actions/checkout@v3
+      - name: Login to DockerHub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME}}
+          password: ${{ secrets.DOCKER_HUB_PASSWORD }}
+      - name: retag latesttest
+        run: |
+          docker pull kindlingproject/kindling-agent:latesttest
+          docker tag kindlingproject/kindling-agent:latesttest kindlingproject/kindling-agent:latest
+          docker push kindlingproject/kindling-agent:latest
+          docker tag kindlingproject/kindling-agent:latesttest kindlingproject/kindling-agent:${{ env.RELEASE }}
+          docker push kindlingproject/kindling-agent:${{ env.RELEASE }}
+
+          docker pull kindlingproject/kindling-camera-front:latesttest
+          docker tag kindlingproject/kindling-camera-front:latesttest kindlingproject/kindling-camera-front:latest
+          docker push kindlingproject/kindling-camera-front:latest
+          docker tag kindlingproject/kindling-camera-front:latesttest kindlingproject/kindling-camera-front:${{ env.RELEASE }}
+          docker push kindlingproject/kindling-camera-front:${{ env.RELEASE }}
+
+          docker pull kindlingproject/kindling-grafana:latesttest
+          docker tag kindlingproject/kindling-grafana:latesttest kindlingproject/kindling-grafana:latest
+          docker push kindlingproject/kindling-grafana:latest
+          docker tag kindlingproject/kindling-grafana:latesttest kindlingproject/kindling-grafana:${{ env.RELEASE }}
+          docker push kindlingproject/kindling-grafana:${{ env.RELEASE }}
+      - name: Prepare Deploy
+        run: |
+          sed -i 's#kindlingproject/kindling-agent:latest#kindlingproject/kindling-agent:${{ env.RELEASE }}#g' deploy/agent/kindling-deploy.yml
+          sed -i 's#kindling-camera-front:latest#kindling-camera-front:${{ env.RELEASE }}#g' deploy/agent/kindling-deploy.yml
+          sed -i 's#kindling-grafana:latest#kindling-grafana:${{ env.RELEASE }}#g' deploy/grafana-with-plugins/kindling-grafana.yaml
+          mv deploy kindling-${{ env.RELEASE }}-install
+          tar -czvf kindling-${{ env.RELEASE }}-install.tar.gz  kindling-${{ env.RELEASE }}-install
+      # - name: update OSS
+      #   uses: tvrcgo/upload-to-oss@master
+      #   with:
+      #     key-id: ${{ secrets.OSS_KEY_ID }}
+      #     key-secret: ${{ secrets.OSS_KEY_SECRET }}
+      #     region: oss-cn-hangzhou
+      #     bucket: tvrcgo
+      #     assets: |
+      #       kindling-${{ env.RELEASE }}-install.tar.gz:/kindling-install.tar
+      - uses: ncipollo/release-action@v1
+        with:
+          artifacts: "kindling-${{ env.RELEASE }}-install.tar.gz"
+          bodyFile: CHANGELOG.md
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: peterjgrainger/action-create-branch@v2.2.0 
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          # Create a new branch based on release tag, e.g release-v0.3.0
+          branch: release-${{ env.RELEASE }}

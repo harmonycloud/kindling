@@ -1,9 +1,14 @@
+// Copyright (C) 2022 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 package defaultaggregator
 
 import (
-	"github.com/Kindling-project/kindling/collector/model"
+	"errors"
 	"sync"
 	"sync/atomic"
+
+	"github.com/Kindling-project/kindling/collector/pkg/model"
 )
 
 type AggregatorKind int
@@ -14,6 +19,7 @@ const (
 	AvgKind
 	LastKind
 	CountKind
+	HistogramKind
 )
 
 func (k AggregatorKind) name() string {
@@ -28,6 +34,8 @@ func (k AggregatorKind) name() string {
 		return "last"
 	case CountKind:
 		return "count"
+	case HistogramKind:
+		return "histogram"
 	default:
 		return ""
 	}
@@ -45,6 +53,8 @@ func GetAggregatorKind(kind string) AggregatorKind {
 		return LastKind
 	case "count":
 		return CountKind
+	case "histogram":
+		return HistogramKind
 	default:
 		return SumKind
 	}
@@ -58,14 +68,16 @@ type (
 	KindConfig struct {
 		OutputName string
 		Kind       AggregatorKind
+		// Only HistogramKind has this value
+		ExplicitBoundaries []int64
 	}
 )
 
 type aggValuesMap interface {
 	// calculate should be thread-safe to use
-	calculate(name string, value int64, timestamp uint64)
-	get(name string) []*model.Gauge
-	getAll() []*model.Gauge
+	calculate(metric *model.Metric, timestamp uint64)
+	get(name string) []*model.Metric
+	getAll() []*model.Metric
 	getTimestamp() uint64
 }
 
@@ -74,52 +86,53 @@ type defaultValuesMap struct {
 	timestamp uint64
 }
 
-func newAggValuesMap(gauges []*model.Gauge, kindMap map[string][]KindConfig) aggValuesMap {
+func newAggValuesMap(metrics []*model.Metric, kindMap map[string][]KindConfig) aggValuesMap {
 	ret := &defaultValuesMap{values: make(map[string][]aggregatedValues)}
-	for _, gauge := range gauges {
-		kindSlice, found := kindMap[gauge.Name]
+	for _, metric := range metrics {
+		kindSlice, found := kindMap[metric.Name]
 		if !found {
 			continue
 		}
 
 		aggValuesSlice := make([]aggregatedValues, len(kindSlice))
 		for i, kind := range kindSlice {
-			aggValuesSlice[i] = newAggValue(kind.OutputName, kind.Kind)
+			aggValuesSlice[i] = newAggValue(kind)
 		}
-		ret.values[gauge.Name] = aggValuesSlice
+		ret.values[metric.Name] = aggValuesSlice
 	}
 	return ret
 }
 
 // calculate returns the result value
-func (m *defaultValuesMap) calculate(name string, value int64, timestamp uint64) {
-	vSlice, ok := m.values[name]
+func (m *defaultValuesMap) calculate(metric *model.Metric, timestamp uint64) {
+	vSlice, ok := m.values[metric.Name]
 	if !ok {
 		return
 	}
 	for _, v := range vSlice {
-		v.calculate(value)
+		if metric.DataType() == model.IntMetricType {
+			v.calculate(metric.GetInt().Value)
+		} else if metric.DataType() == model.HistogramMetricType {
+			v.merge(metric.GetHistogram())
+		}
 	}
 	atomic.StoreUint64(&m.timestamp, timestamp)
 }
 
-func (m *defaultValuesMap) get(name string) []*model.Gauge {
+func (m *defaultValuesMap) get(name string) []*model.Metric {
 	vSlice, ok := m.values[name]
 	if !ok {
 		return nil
 	}
-	ret := make([]*model.Gauge, len(vSlice))
+	ret := make([]*model.Metric, len(vSlice))
 	for i, v := range vSlice {
-		ret[i] = &model.Gauge{
-			Name:  v.getName(),
-			Value: v.get(),
-		}
+		ret[i] = v.get()
 	}
 	return ret
 }
 
-func (m *defaultValuesMap) getAll() []*model.Gauge {
-	ret := make([]*model.Gauge, 0)
+func (m *defaultValuesMap) getAll() []*model.Metric {
+	ret := make([]*model.Metric, 0)
 	for k := range m.values {
 		ret = append(ret, m.get(k)...)
 	}
@@ -130,8 +143,9 @@ func (m *defaultValuesMap) getTimestamp() uint64 {
 	return atomic.LoadUint64(&m.timestamp)
 }
 
-func newAggValue(name string, kind AggregatorKind) aggregatedValues {
-	switch kind {
+func newAggValue(cfg KindConfig) aggregatedValues {
+	name := cfg.OutputName
+	switch cfg.Kind {
 	case SumKind:
 		return &sumValue{name: name}
 	case MaxKind:
@@ -142,15 +156,18 @@ func newAggValue(name string, kind AggregatorKind) aggregatedValues {
 		return &lastValue{name: name}
 	case CountKind:
 		return &countValue{name: name}
+	case HistogramKind:
+		return &histogramValue{name: name, explicitBoundaries: cfg.ExplicitBoundaries, bucketCounts: make([]uint64, len(cfg.ExplicitBoundaries))}
 	default:
 		return &lastValue{name: name}
 	}
 }
 
 type aggregatedValues interface {
+	merge(metric *model.Histogram) error
 	calculate(value int64) int64
 	// get returns the value
-	get() int64
+	get() *model.Metric
 	// getName returns the value's name
 	getName() string
 }
@@ -169,13 +186,18 @@ func (v *maxValue) calculate(value int64) int64 {
 	}
 	return v.value
 }
-func (v *maxValue) get() int64 {
+func (v *maxValue) get() *model.Metric {
 	v.mut.RLock()
 	defer v.mut.RUnlock()
-	return v.value
+	return model.NewIntMetric(v.name, v.value)
 }
+
 func (v *maxValue) getName() string {
 	return v.name
+}
+
+func (v *maxValue) merge(metric *model.Histogram) error {
+	return errors.New("can not use max on a histogram metric")
 }
 
 type sumValue struct {
@@ -186,11 +208,15 @@ type sumValue struct {
 func (v *sumValue) calculate(value int64) int64 {
 	return atomic.AddInt64(&v.value, value)
 }
-func (v *sumValue) get() int64 {
-	return atomic.LoadInt64(&v.value)
+func (v *sumValue) get() *model.Metric {
+	return model.NewIntMetric(v.name, atomic.LoadInt64(&v.value))
 }
 func (v *sumValue) getName() string {
 	return v.name
+}
+func (v *sumValue) merge(metric *model.Histogram) error {
+	atomic.AddInt64(&v.value, metric.Sum)
+	return nil
 }
 
 type avgValue struct {
@@ -209,13 +235,21 @@ func (v *avgValue) calculate(value int64) int64 {
 	v.count++
 	return v.count
 }
-func (v *avgValue) get() int64 {
+func (v *avgValue) get() *model.Metric {
 	v.mut.RLock()
 	defer v.mut.RUnlock()
-	return v.value / v.count
+	return model.NewIntMetric(v.name, v.value/v.count)
 }
 func (v *avgValue) getName() string {
 	return v.name
+}
+
+func (v *avgValue) merge(metric *model.Histogram) error {
+	v.mut.Lock()
+	defer v.mut.Unlock()
+	v.count += int64(metric.Count)
+	v.value += metric.Sum
+	return nil
 }
 
 type lastValue struct {
@@ -226,11 +260,14 @@ type lastValue struct {
 func (v *lastValue) calculate(value int64) int64 {
 	return atomic.SwapInt64(&v.value, value)
 }
-func (v *lastValue) get() int64 {
-	return atomic.LoadInt64(&v.value)
+func (v *lastValue) get() *model.Metric {
+	return model.NewIntMetric(v.name, atomic.LoadInt64(&v.value))
 }
 func (v *lastValue) getName() string {
 	return v.name
+}
+func (v *lastValue) merge(metric *model.Histogram) error {
+	return errors.New("can not use lastValue on a histogram metric")
 }
 
 type countValue struct {
@@ -242,9 +279,67 @@ type countValue struct {
 func (v *countValue) calculate(_ int64) int64 {
 	return atomic.AddInt64(&v.value, 1)
 }
-func (v *countValue) get() int64 {
-	return atomic.LoadInt64(&v.value)
+
+// calculate add 1 to its own value
+func (v *countValue) merge(metric *model.Histogram) error {
+	atomic.AddInt64(&v.value, int64(metric.Count))
+	return nil
+}
+
+func (v *countValue) get() *model.Metric {
+	return model.NewIntMetric(v.name, atomic.LoadInt64(&v.value))
 }
 func (v *countValue) getName() string {
 	return v.name
+}
+
+type histogramValue struct {
+	name               string
+	sum                int64
+	count              uint64
+	explicitBoundaries []int64
+	bucketCounts       []uint64
+	mut                sync.RWMutex
+}
+
+func (v *histogramValue) calculate(value int64) int64 {
+	v.mut.Lock()
+	defer v.mut.Unlock()
+	v.sum += value
+	v.count++
+	for i := 0; i < len(v.explicitBoundaries); i++ {
+		if value <= v.explicitBoundaries[i] {
+			v.bucketCounts[i] += 1
+		}
+	}
+	return int64(v.count)
+}
+
+func (v *histogramValue) get() *model.Metric {
+	v.mut.RLock()
+	defer v.mut.RUnlock()
+	return model.NewHistogramMetric(v.name, &model.Histogram{
+		Sum:                v.sum,
+		Count:              v.count,
+		ExplicitBoundaries: v.explicitBoundaries,
+		BucketCounts:       v.bucketCounts,
+	})
+}
+
+func (v *histogramValue) getName() string {
+	return v.name
+}
+
+func (v *histogramValue) merge(metric *model.Histogram) error {
+	v.mut.Lock()
+	defer v.mut.Unlock()
+	if len(v.explicitBoundaries) != len(metric.ExplicitBoundaries) {
+		return errors.New("merge histogram failed when aggregating,the incoming metric's explicitBoundaries is different from memory")
+	}
+	v.sum += metric.Sum
+	v.count += metric.Count
+	for i := 0; i < len(metric.BucketCounts); i++ {
+		v.bucketCounts[i] += metric.BucketCounts[i]
+	}
+	return nil
 }

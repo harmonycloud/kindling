@@ -1,3 +1,6 @@
+// Copyright (C) 2022-2023 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 import _ from 'lodash';
 export interface SelectOption {
     label: string, 
@@ -9,20 +12,20 @@ class FilterList {
     workloadList: SelectOption[];
     workloadListByNamespace: any;
 
-    constructor(data: any) {
+    constructor(data: any, namespace: string) {
         this.namespaceList = [];
         this.workloadList = [];
         this.workloadListByNamespace = {};
 
-        this.init(data);
+        this.init(data, namespace);
     }
 
-    init(data: any[]) {
+    init(data: any[], namespace: string) {
         let namespaces = _.uniq(_.concat(_.map(data, 'src_namespace'), _.map(data, 'dst_namespace')));
-        this.namespaceList.push({
-            label: 'All', 
-            value: 'all'
-        });
+        // this.namespaceList.push({
+        //     label: 'All', 
+        //     value: 'all'
+        // });
         this.workloadList.push({
             label: 'All', 
             value: 'all'
@@ -49,6 +52,14 @@ class FilterList {
                 }
             });
         });
+        this.namespaceList.sort((a, b) => a.value.localeCompare(b.value));
+        this.namespaceList.push({
+            label: 'All', 
+            value: 'all'
+        });
+        if (namespace !== 'all') {
+            this.changeNamespace(namespace);
+        }
     }
 
     changeNamespace(namespace: string) {
