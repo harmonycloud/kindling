@@ -1,3 +1,6 @@
+// Copyright (C) 2022-2023 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 type SeriesSize = 'sm' | 'md' | 'lg';
 export type MetricType = 'latency' | 'calls' | 'errorRate' | 'sentVolume' | 'receiveVolume' | 'rtt' | 'retransmit' | 'packageLost' | 'connFail';
 

@@ -1,3 +1,6 @@
+// Copyright (C) 2022-2023 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef CPU_CONVERTER_H
 #define CPU_CONVERTER_H
 #include <map>

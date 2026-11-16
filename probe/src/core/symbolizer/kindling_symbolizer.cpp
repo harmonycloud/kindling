@@ -1,9 +1,10 @@
+// Copyright (C) 2026 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 #include "kindling_symbolizer.h"
 #include <memory>
 #include <vector>
 #include <cstring>
-#include <cstdlib>
-#include <chrono>
 
 static std::unique_ptr<BccPerPidSymbolizer> g_sym;
 

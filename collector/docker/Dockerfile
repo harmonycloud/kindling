@@ -1,3 +1,6 @@
+# Copyright (C) 2022-2026 Kindling Project Authors.
+# SPDX-License-Identifier: Apache-2.0
+
 FROM centos:7
 
 WORKDIR /app/

@@ -1,3 +1,6 @@
+# Copyright (C) 2022-2023 Kindling Project Authors.
+# SPDX-License-Identifier: Apache-2.0
+
 GitCommit=${shell git rev-parse --short HEAD || echo unknow}
 
 define exec-command

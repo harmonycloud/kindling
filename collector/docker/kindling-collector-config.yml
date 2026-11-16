@@ -52,10 +52,13 @@ receivers:
         max_backoff_retries: 10
       sender_worker_count: 2
       sender_queue_capacity: 200
-      # Empty / omit = sample all processes (CAPTURE_ALL).
-      # Non-empty = only these host PIDs (PROFILING_ENABLED whitelist).
-      # Example: pids: [1234, 5678]
+      # Empty / omit = no CPU sampling.
+      # [0] = explicitly sample all processes; 0 must be used alone.
+      # Positive host PIDs = whitelist, e.g. [1234, 5678].
       pids: []
+      metrics:
+        enable: false
+        interval: 60s
 
 analyzers:
   cpuanalyzer:

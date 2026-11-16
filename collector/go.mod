@@ -1,8 +1,11 @@
 module github.com/Kindling-project/kindling/collector
 
-go 1.19
+go 1.23.0
 
 require (
+	github.com/elastic/go-freelru v0.16.0
+	golang.org/x/arch v0.11.0
+	go.opentelemetry.io/ebpf-profiler v0.0.0-20261105034946-7ca45ed3c933
 	github.com/DataDog/ebpf v0.0.0-20220301203322-3fc9ab3b8daf
 	github.com/florianl/go-conntrack v0.3.0
 	github.com/gogo/protobuf v1.3.2
@@ -17,7 +20,7 @@ require (
 	github.com/prometheus/client_golang v1.17.0
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/spf13/viper v1.10.1
-	github.com/stretchr/testify v1.8.1
+	github.com/stretchr/testify v1.10.0
 	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74
 	go.opentelemetry.io/otel v1.7.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v0.25.0
@@ -34,7 +37,7 @@ require (
 	go.uber.org/multierr v1.7.0
 	go.uber.org/zap v1.19.1
 	golang.org/x/net v0.23.0
-	golang.org/x/sys v0.18.0
+	golang.org/x/sys v0.31.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 	k8s.io/api v0.24.2
 	k8s.io/apimachinery v0.24.2
@@ -82,6 +85,7 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/googleapis/gnostic v0.4.1 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/grafana/regexp v0.0.0-20221122212121-6b5c0a4cb7fd // indirect
@@ -92,10 +96,12 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/josharian/native v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/klauspost/cpuid/v2 v2.2.10 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mdlayher/socket v0.4.0 // indirect
+	github.com/minio/sha256-simd v1.0.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect
@@ -110,6 +116,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.4.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
+	github.com/zeebo/xxh3 v1.1.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric v0.25.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.7.0 // indirect
 	go.opentelemetry.io/otel/internal/metric v0.25.0 // indirect
@@ -132,3 +139,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.1 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+replace go.opentelemetry.io/ebpf-profiler => github.com/harmonycloud/otel-ebpf-profiler v0.0.0-20261105034946-7ca45ed3c933

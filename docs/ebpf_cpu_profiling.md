@@ -1,15 +1,17 @@
-  # eBPF CPU Profiling → Pyroscope
+# eBPF CPU profiling
 
-Kindling can sample CPU call stacks with eBPF (~97Hz), symbolize them with a
-minimal BCC symbolizer baked into `libkindling`, and push gzip pprof profiles to
-[Grafana Pyroscope](https://grafana.com/oss/pyroscope/) every **15 seconds**.
+Kindling samples Native/C/C++, Go and CPython CPU stacks at approximately 97 Hz
+and sends gzip pprof profiles to Pyroscope. Native unwinding uses ELF unwind
+metadata and frame pointers. Go symbols are read from pclntab; Python frames are
+resolved while their code objects are still available. Kernel symbols and native
+fallbacks use the BCC symbolizer linked into `libkindling.so`.
 
-This path is **independent** of the existing Camera On/OffCPU flame graph
-(`cpuanalyzer` → `cameraexporter` → `camera-front`).
+This path is independent of Camera On/OffCPU profiling. It does not include Java
+or allocation/memory profiling.
 
-## Enable / disable
+## Configuration
 
-Edit the collector ConfigMap / config file:
+Set `receivers.cgoreceiver.ebpf_profiling` in either deployment configuration:
 
 - `deploy/agent/kindling-collector-config.yml`
 - `collector/docker/kindling-collector-config.yml`
@@ -19,76 +21,73 @@ receivers:
   cgoreceiver:
     ebpf_profiling:
       endpoint:
-        # Empty = disabled (default). Non-empty = start sampling + push.
-        url: "http://pyroscope:4040/"
-      # Empty / omit = sample all non-kernel processes (CAPTURE_ALL).
-      # Non-empty = only these host PIDs (whitelist + PROFILING_ENABLED).
-      pids: []
-      # Example: pids: [1234, 5678]
+        url: "http://pyroscope:4040/" # Empty disables CPU profiling.
+        remote_timeout: 10s
+        min_backoff_period: 500ms
+        max_backoff_period: 30s
+        max_backoff_retries: 10
+      sender_worker_count: 2
+      sender_queue_capacity: 200
+      pids: [1234, 5678] # Host PIDs.
+      metrics:
+        enable: true
+        interval: 60s
 ```
 
-Apply via the usual agent ConfigMap (`kindlingcfg`) and restart the agent pod.
+An empty `endpoint.url` disables profiling. An omitted or empty `pids` list also
+disables CPU sampling. Set `pids: [0]` to explicitly sample all processes
+(`CAPTURE_ALL`), or list positive host PIDs such as `[1234, 5678]` for whitelist
+sampling. The all-process marker `0` must be used alone; mixing it with other
+PIDs is a configuration error. Configuration is read at startup, so restart the
+agent after editing the file or ConfigMap. No page configuration handler or
+runtime configuration endpoint is included.
 
-**Sampling scope** (static, read at startup only):
+The profile name is `process_cpu`. Labels include `service_name=kindling`,
+`host_ip` from `MY_NODE_IP`, `pid`, and `container_id` when known. Export defaults
+to every 15 seconds. `metrics.enable` enables periodic self-monitoring logs for
+BPF samples/errors, PID reports, mapping synchronization, stack aggregation,
+symbolization and push/retry outcomes.
 
-| `pids` | Behavior |
-|--------|----------|
-| omitted / `[]` | `CAPTURE_ALL` — all non-kernel threads |
-| `[pid, ...]` | whitelist — only those host PIDs |
+## Build and deployment
 
-There is no runtime hot-reload of the PID list; change YAML and restart the agent.
+Collector, probe and agent-libs must be upgraded together. The old aggregated
+`cpu_counts`/`cpu_stacks` protocol is replaced by typed trace events and native
+unwind maps. Initialize the pinned submodule before building:
 
-## What gets pushed
+```sh
+git submodule update --init --recursive
+```
 
-| Item | Value |
-|------|--------|
-| Profile name | `process_cpu` (`__name__`) |
-| Labels | `service_name=kindling`, `host_ip` (`MY_NODE_IP`), `pid` |
-| Interval | 15s (hardcoded in `cgoreceiver.Start`) |
-| Sample rate | 97Hz |
+Build the collector with Go 1.23 or later. The preprocessing dependency is pinned
+to commit `7ca45ed3c933` from the `kindling-preprocess` branch of
+[`harmonycloud/otel-ebpf-profiler`](https://github.com/harmonycloud/otel-ebpf-profiler/tree/kindling-preprocess)
+in `collector/go.mod`.
+Build `libkindling.so` first and make it available to the CGO linker and runtime
+(e.g. `CGO_LDFLAGS=-L/path/to/probe/build/src` and
+`LD_LIBRARY_PATH=/path/to/probe/build/src`). Existing probe dependencies include
+Qt5, libelf and zlib. CMake fetches the BCC v0.30 subset and spdlog v1.14 headers;
+`USE_BUNDLED_SPDLOG=OFF` uses installed spdlog headers instead.
 
-## Runtime requirements
+Runtime requires permission for BPF/perf events, visibility into host PIDs and
+`/proc`, readable executable mappings and kernel symbols, and access to the
+Pyroscope endpoint. The agent deployment uses privileged mode and host PID
+visibility. Python preprocessing reads the target process's runtime metadata;
+permissions or an unsupported runtime can prevent Python frame collection.
 
-The stock `deploy/agent/kindling-deploy.yml` already satisfies these:
+## Validation
 
-- `privileged: true` (eBPF + `perf_event_open`)
-- `hostPID: true` / host `/proc` mounts (user-space symbolization)
-- host `/sys` mount; `kindling-probe-loader` mounts debugfs under `/sys/kernel/debug` if missing
+Run `go test ./pkg/profiling/...` from `collector/` with the newly built probe
+library available. The tests cover frame decoding, aggregation, symbolization,
+process mapping lifetimes, Python preprocessing, PID rosters and self-monitoring.
+Live acceptance also requires a privileged host: select representative Native,
+Go and Python processes, confirm named `process_cpu` profiles in Pyroscope,
+inspect metrics, restart with updated PIDs, and verify clean shutdown. Unit tests and a
+successful build alone do not verify BPF loading or live export.
 
-Without those, CPU stack sampling will not work even if `url` is set.
+## Code entry points
 
-## Probe build notes (BCC symbolizer)
-
-CPU symbolization uses a **vendored BCC v0.30 subset** (`bcc_syms_minimal`), not
-a system `libbcc` package.
-
-| Piece | Path |
-|-------|------|
-| Fetch/build | `probe/cmake/modules/bcc_minimal.cmake` |
-| Sources | `probe/src/core/symbolizer/` |
-| Link into | `libkindling.so` (`probe/src/CMakeLists.txt`) |
-
-Build-host packages (in addition to existing probe deps such as Qt5 / cmake):
-
-- `elfutils-devel` / `libelf-dev`
-- `zlib-devel` / `zlib1g-dev`
-- network access at **cmake configure** time (FetchContent downloads BCC v0.30.0)
-
-The agent runtime image only needs the prebuilt `libkindling.so`; BCC is linked in statically.
-
-## Acceptance checklist
-
-| Check | How |
-|-------|-----|
-| Default off | Leave `endpoint.url` empty; agent logs skip / does not start CPU sampling |
-| Push works | Set `url` to Pyroscope base (e.g. `http://<host>:4040/`); after ~15s UI shows `process_cpu` |
-| Symbols | Flame graph has function names or at least `module+offset` frames |
-| Stop cleanly | Stop agent; sampling stops (no stuck perf attachments / growing maps) |
-
-Full eBPF→Pyroscope verification needs a privileged agent (see Runtime requirements) plus a reachable Pyroscope.
-
-## Related code
-
-- Collector loop: `collector/pkg/component/receiver/cgoreceiver/profiling.go`
-- Sender: `collector/pkg/component/consumer/exporter/pyroscopeexporter/simple_sender.go`
-- pprof builder: `collector/pkg/ebpf/pprof/`
+- Probe trace reader and map writer: `probe/src/core/profiling/`
+- Pure C boundary: `probe/src/cgo/profiling_cgo.h` (identical collector copy)
+- Receiver lifecycle: `collector/pkg/component/receiver/cgoreceiver/profiling.go`
+- CPU service, preprocessing and symbolization: `collector/pkg/profiling/`
+- Pyroscope sender: `collector/pkg/component/consumer/exporter/pyroscopeexporter/`

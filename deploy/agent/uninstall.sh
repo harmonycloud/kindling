@@ -1,3 +1,6 @@
+# Copyright (C) 2022 Kindling Project Authors.
+# SPDX-License-Identifier: Apache-2.0
+
 kubectl delete -f kindling-prometheus-servicemonitor.yml
 kubectl delete -f kindling-prometheus-service.yml
 kubectl delete -f kindling-prometheus-rabc.yml
