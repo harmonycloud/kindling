@@ -19,12 +19,6 @@ int runForGo();
 int getEventsByInterval(int interval, void** kindlingEvent, void* count);
 void suppressEventsCommForGo(char *comm);
 void subEventForGo(char* eventName, char* category, void* params);
-int startProfile();
-int stopProfile();
-char* startAttachAgent(int pid);
-char* stopAttachAgent(int pid);
-void startProfileDebug(int pid, int tid);
-void stopProfileDebug();
 void getCaptureStatistics(struct capture_statistics_for_go* stats);
 void catchSignalUp();
 

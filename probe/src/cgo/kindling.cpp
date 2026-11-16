@@ -7,17 +7,11 @@
 
 #include "kindling.h"
 #include <cstdlib>
-#include <fstream>
 #include <iostream>
-#include <thread>
-#include "converter/cpu_converter.h"
 #include "scap_open_exception.h"
 #include "sinsp_capture_interrupt_exception.h"
 #include "utils.h"
 
-cpu_converter* cpuConverter;
-fstream debug_file_log;
-map<uint64_t, char*> ptid_comm;
 static sinsp* inspector = nullptr;
 sinsp_evt_formatter* formatter = nullptr;
 bool printEvent = false;
@@ -25,27 +19,6 @@ int cnt = 0;
 int MAX_USERATTR_NUM = 8;
 map<string, ppm_event_type> m_events;
 map<string, Category> m_categories;
-vector<QObject*> qls;
-
-bool is_start_profile = false;
-bool all_attach = true;
-bool is_profile_debug = false;
-int64_t debug_pid = 0;
-int64_t debug_tid = 0;
-char* traceId = new char[128];
-char* isEnter = new char[16];
-char* protocol = new char[32];
-char* url = new char[256];
-char* start_time_char = new char[32];
-char* end_time_char = new char[32];
-char* tid_char = new char[32];
-char* time_char = new char[32];
-char* depth_char = new char[8];
-char* finish_char = new char[4];
-char* kd_stack = new char[1024];
-char* duration_char = new char[32];
-char* span_char = new char[1024];
-
 int16_t event_filters[1024][16];
 uint64_t receiver_ts = 0;
 
@@ -145,19 +118,6 @@ void set_snaplen(sinsp* inspector) {
 }
 
 int init_probe() {
-  int argc = 1;
-  QCoreApplication app(argc, 0);
-
-  // w.show();
-  QObject* object;
-  app.addLibraryPath(QString("../KindlingPlugin"));  // 加入库路径
-  // 载入插件，取得实例
-  QPluginLoader l(QString("kindling-plugin"));
-  object = l.instance();
-  if (object != NULL) {
-    qls.push_back(object);
-  }
-
   char* isPrintEvent = getenv("IS_PRINT_EVENT");
   if (isPrintEvent != nullptr && strncmp("true", isPrintEvent, sizeof(isPrintEvent)) == 0) {
     printEvent = true;
@@ -175,7 +135,6 @@ int init_probe() {
     inspector->open("");
     set_eventmask(inspector);
 
-    cpuConverter = new cpu_converter(inspector);
   } catch (const exception& e) {
     fprintf(stderr, "kindling probe init err: %s", e.what());
     return 1;
@@ -194,33 +153,11 @@ int getEvent(uint64_t interval, void** pp_kindling_event, int* event_count) {
     return -1;
   }
   auto threadInfo = ev->get_thread_info();
-  if (is_start_profile &&
-      (ev->get_type() == PPME_SYSCALL_EXECVE_8_X || ev->get_type() == PPME_SYSCALL_EXECVE_13_X ||
-       ev->get_type() == PPME_SYSCALL_EXECVE_15_X || ev->get_type() == PPME_SYSCALL_EXECVE_16_X ||
-       ev->get_type() == PPME_SYSCALL_EXECVE_17_X || ev->get_type() == PPME_SYSCALL_EXECVE_18_X ||
-       ev->get_type() == PPME_SYSCALL_EXECVE_19_X || ev->get_type() == PPME_SYSCALL_CLONE_11_X ||
-       ev->get_type() == PPME_SYSCALL_CLONE_16_X || ev->get_type() == PPME_SYSCALL_CLONE_17_X ||
-       ev->get_type() == PPME_SYSCALL_CLONE_20_X || ev->get_type() == PPME_SYSCALL_FORK_X ||
-       ev->get_type() == PPME_SYSCALL_FORK_17_X || ev->get_type() == PPME_SYSCALL_FORK_20_X ||
-       ev->get_type() == PPME_SYSCALL_VFORK_X || ev->get_type() == PPME_SYSCALL_VFORK_17_X ||
-       ev->get_type() == PPME_SYSCALL_VFORK_20_X) &&
-      threadInfo->is_main_thread()) {
-    if (strstr(threadInfo->m_comm.c_str(), "java") != NULL) {
-      string pid_str = std::to_string(threadInfo->m_pid);
-      char* temp_char = (char*)pid_str.data();
-      thread attach(attach_pid, temp_char, true, true, false, false);
-      attach.join();
-    }
-  }
   uint16_t kindling_category = get_kindling_category(ev);
   uint16_t ev_type = ev->get_type();
   int evtcnt = *event_count;
 
   print_event(ev);
-  if (ev_type != PPME_CPU_ANALYSIS_E && is_profile_debug && threadInfo->m_tid == debug_tid &&
-      threadInfo->m_pid == debug_pid) {
-    print_profile_debug_info(ev);
-  }
   kindling_event_t_for_go* p_kindling_event;
   init_kindling_event(p_kindling_event, pp_kindling_event);
 
@@ -228,54 +165,6 @@ int getEvent(uint64_t interval, void** pp_kindling_event, int* event_count) {
   p_kindling_event = (kindling_event_t_for_go*)*pp_kindling_event;
   uint16_t userAttNumber = 0;
   uint16_t source = get_kindling_source(ev->get_type());
-  if (is_start_profile) {
-    for (auto it = qls.begin(); it != qls.end(); it++) {
-      KindlingInterface* plugin = qobject_cast<KindlingInterface*>(*it);
-      if (plugin) {
-        plugin->addCache(ev, inspector);
-      }
-    }
-  }
-
-  if (is_start_profile && ev->get_type() == PPME_SYSCALL_WRITE_X && fdInfo != nullptr &&
-      fdInfo->is_file()) {
-    auto data_param = ev->get_param_value_raw("data");
-    if (data_param != nullptr) {
-      char* data_val = data_param->m_val;
-      if (data_param->m_len > 6 && memcmp(data_val, "kd-jf@", 6) == 0) {
-        parse_jf(data_val, *data_param, p_kindling_event, threadInfo, userAttNumber);
-        return 1;
-      }
-      if (data_param->m_len > 8 && memcmp(data_val, "kd-txid@", 8) == 0) {
-        parse_xtid(ev, data_val, *data_param, p_kindling_event, threadInfo, userAttNumber);
-        return 1;
-      }
-      if (data_param->m_len > 8 && memcmp(data_val, "kd-span@", 8) == 0) {
-        parse_span(ev, data_val, *data_param, p_kindling_event, threadInfo, userAttNumber);
-        return 1;
-      }
-      if (data_param->m_len > 6 && memcmp(data_val, "kd-tm@", 6) == 0) {
-        parse_tm(data_val, *data_param, threadInfo);
-        return -1;
-      }
-    }
-  }
-
-  if (is_start_profile && ev_type == PPME_CPU_ANALYSIS_E) {
-    char* tmp_comm;
-
-    map<uint64_t, char*>::iterator key =
-        ptid_comm.find(threadInfo->m_pid << 32 | (threadInfo->m_tid & 0xFFFFFFFF));
-    if (key != ptid_comm.end()) {
-      tmp_comm = key->second;
-    } else {
-      tmp_comm = (char*)threadInfo->m_comm.data();
-    }
-
-    strcpy(p_kindling_event->context.tinfo.comm, tmp_comm);
-    return cpuConverter->convert(p_kindling_event, ev, qls, is_profile_debug, debug_pid, debug_tid);
-  }
-
   if (event_filters[ev_type][kindling_category] == 0) {
     return -1;
   }
@@ -451,15 +340,7 @@ int getEvent(uint64_t interval, void** pp_kindling_event, int* event_count) {
   }
   p_kindling_event->paramsNumber = userAttNumber;
   strcpy(p_kindling_event->name, (char*)ev->get_name());
-  char* tmp_comm;
-  map<uint64_t, char*>::iterator key =
-      ptid_comm.find(threadInfo->m_pid << 32 | (threadInfo->m_tid & 0xFFFFFFFF));
-  if (key != ptid_comm.end()) {
-    tmp_comm = key->second;
-  } else {
-    tmp_comm = (char*)threadInfo->m_comm.data();
-  }
-  strcpy(p_kindling_event->context.tinfo.comm, tmp_comm);
+  strcpy(p_kindling_event->context.tinfo.comm, (char*)threadInfo->m_comm.data());
   strcpy(p_kindling_event->context.tinfo.containerId, (char*)threadInfo->m_container_id.data());
   evtcnt++;
   *event_count = evtcnt;
@@ -467,254 +348,6 @@ int getEvent(uint64_t interval, void** pp_kindling_event, int* event_count) {
     receiver_ts = ev->get_ts();
   }
   return 1;
-}
-
-void parse_jf(char* data_val, sinsp_evt_param data_param, kindling_event_t_for_go* p_kindling_event,
-              sinsp_threadinfo* threadInfo, uint16_t& userAttNumber) {
-  int val_offset = 0;
-  int tmp_offset = 0;
-  for (int i = 6; i < data_param.m_len; i++) {
-    if (data_val[i] == '!') {
-      if (val_offset == 0) {
-        start_time_char[tmp_offset] = '\0';
-      } else if (val_offset == 1) {
-        end_time_char[tmp_offset] = '\0';
-      } else if (val_offset == 2) {
-        tid_char[tmp_offset] = '\0';
-        break;
-      }
-      tmp_offset = 0;
-      val_offset++;
-      continue;
-    }
-    if (val_offset == 0) {
-      start_time_char[tmp_offset] = data_val[i];
-    } else if (val_offset == 1) {
-      end_time_char[tmp_offset] = data_val[i];
-    } else if (val_offset == 2) {
-      tid_char[tmp_offset] = data_val[i];
-    }
-    tmp_offset++;
-  }
-  p_kindling_event->timestamp = atol(start_time_char);
-  strcpy(p_kindling_event->userAttributes[userAttNumber].key, "end_time");
-  memcpy(p_kindling_event->userAttributes[userAttNumber].value,
-         to_string(atol(end_time_char)).data(), 19);
-  p_kindling_event->userAttributes[userAttNumber].valueType = UINT64;
-  p_kindling_event->userAttributes[userAttNumber].len = 19;
-  userAttNumber++;
-  strcpy(p_kindling_event->userAttributes[userAttNumber].key, "data");
-  memcpy(p_kindling_event->userAttributes[userAttNumber].value, data_val, data_param.m_len);
-  p_kindling_event->userAttributes[userAttNumber].valueType = CHARBUF;
-  p_kindling_event->userAttributes[userAttNumber].len = data_param.m_len;
-  userAttNumber++;
-  strcpy(p_kindling_event->name, "java_futex_info");
-  p_kindling_event->context.tinfo.tid = threadInfo->m_tid;
-  map<uint64_t, char*>::iterator key =
-      ptid_comm.find(threadInfo->m_pid << 32 | (threadInfo->m_tid & 0xFFFFFFFF));
-  if (key != ptid_comm.end()) {
-    strcpy(p_kindling_event->context.tinfo.comm, key->second);
-  } else {
-    strcpy(p_kindling_event->context.tinfo.comm, (char*)threadInfo->m_comm.data());
-  }
-  p_kindling_event->context.tinfo.pid = threadInfo->m_pid;
-  p_kindling_event->paramsNumber = userAttNumber;
-}
-
-void parse_xtid(sinsp_evt* s_evt, char* data_val, sinsp_evt_param data_param,
-                kindling_event_t_for_go* p_kindling_event, sinsp_threadinfo* threadInfo,
-                uint16_t& userAttNumber) {
-  int val_offset = 0;
-  int tmp_offset = 0;
-  int traceId_offset = 0;
-  int protocol_offset = 0;
-  int url_offset = 0;
-  for (int i = 8; i < data_param.m_len; i++) {
-    if (data_val[i] == '!') {
-      if (val_offset == 0) {
-        traceId[tmp_offset] = '\0';
-        traceId_offset = tmp_offset;
-      } else if (val_offset == 1) {
-        isEnter[tmp_offset] = '\0';
-      } else if (val_offset == 2) {
-        protocol[tmp_offset] = '\0';
-        protocol_offset = tmp_offset;
-      } else if (val_offset == 3) {
-        url[tmp_offset] = '\0';
-        url_offset = tmp_offset;
-        break;
-      }
-      tmp_offset = 0;
-      val_offset++;
-      continue;
-    }
-    if (val_offset == 0) {
-      traceId[tmp_offset] = data_val[i];
-    } else if (val_offset == 1) {
-      isEnter[tmp_offset] = data_val[i];
-    } else if (val_offset == 2) {
-      protocol[tmp_offset] = data_val[i];
-    } else if (val_offset == 3) {
-      url[tmp_offset] = data_val[i];
-    }
-
-    tmp_offset++;
-  }
-  p_kindling_event->timestamp = s_evt->get_ts();
-  strcpy(p_kindling_event->userAttributes[userAttNumber].key, "trace_id");
-  memcpy(p_kindling_event->userAttributes[userAttNumber].value, traceId, traceId_offset);
-  p_kindling_event->userAttributes[userAttNumber].valueType = CHARBUF;
-  p_kindling_event->userAttributes[userAttNumber].len = traceId_offset;
-  userAttNumber++;
-  strcpy(p_kindling_event->userAttributes[userAttNumber].key, "is_enter");
-  memcpy(p_kindling_event->userAttributes[userAttNumber].value, isEnter, 1);
-  p_kindling_event->userAttributes[userAttNumber].valueType = CHARBUF;
-  p_kindling_event->userAttributes[userAttNumber].len = 1;
-  userAttNumber++;
-  strcpy(p_kindling_event->userAttributes[userAttNumber].key, "protocol");
-  memcpy(p_kindling_event->userAttributes[userAttNumber].value, protocol, protocol_offset);
-  p_kindling_event->userAttributes[userAttNumber].valueType = CHARBUF;
-  p_kindling_event->userAttributes[userAttNumber].len = protocol_offset;
-  userAttNumber++;
-  strcpy(p_kindling_event->userAttributes[userAttNumber].key, "url");
-  memcpy(p_kindling_event->userAttributes[userAttNumber].value, url, url_offset);
-  p_kindling_event->userAttributes[userAttNumber].valueType = CHARBUF;
-  p_kindling_event->userAttributes[userAttNumber].len = url_offset;
-  userAttNumber++;
-  strcpy(p_kindling_event->name, "apm_trace_id_event");
-  p_kindling_event->context.tinfo.tid = threadInfo->m_tid;
-  map<uint64_t, char*>::iterator key =
-      ptid_comm.find(threadInfo->m_pid << 32 | (threadInfo->m_tid & 0xFFFFFFFF));
-  if (key != ptid_comm.end()) {
-    strcpy(p_kindling_event->context.tinfo.comm, key->second);
-  } else {
-    strcpy(p_kindling_event->context.tinfo.comm, (char*)threadInfo->m_comm.data());
-  }
-  p_kindling_event->context.tinfo.pid = threadInfo->m_pid;
-  strcpy(p_kindling_event->context.tinfo.containerId, (char*)threadInfo->m_container_id.data());
-  p_kindling_event->paramsNumber = userAttNumber;
-}
-
-void parse_span(sinsp_evt* s_evt, char* data_val, sinsp_evt_param data_param,
-                kindling_event_t_for_go* p_kindling_event, sinsp_threadinfo* threadInfo,
-                uint16_t& userAttNumber) {
-  if (data_param.m_len < 10) {
-    return;
-  }
-  int val_offset = 0;
-  int tmp_offset = 0;
-  int span_offset = 0;
-  int traceId_offset = 0;
-
-  bool version_new = false;
-  int fromIndex = 8;
-  if (data_val[8] == '1' && data_val[9] == '!') {
-    version_new = true;
-    fromIndex = 10;
-  }
-  for (int i = fromIndex; i < data_param.m_len; i++) {
-    if (data_val[i] == '!') {
-      if (val_offset == 0) {
-        duration_char[tmp_offset] = '\0';
-      } else if (val_offset == 1) {
-        span_char[tmp_offset] = '\0';
-        span_offset = tmp_offset;
-      } else if (val_offset == 2) {
-        traceId[tmp_offset] = '\0';
-        traceId_offset = tmp_offset;
-        break;
-      }
-      tmp_offset = 0;
-      val_offset++;
-      continue;
-    }
-    if (val_offset == 0) {
-      duration_char[tmp_offset] = data_val[i];
-    } else if (val_offset == 1) {
-      span_char[tmp_offset] = data_val[i];
-    } else if (val_offset == 2) {
-      traceId[tmp_offset] = data_val[i];
-    }
-    tmp_offset++;
-  }
-  if (version_new) {
-    // StartTime
-    p_kindling_event->timestamp = atol(duration_char);
-  } else {
-    // EndTime - Duration
-    p_kindling_event->timestamp = s_evt->get_ts() - atol(duration_char);
-  }
-  strcpy(p_kindling_event->userAttributes[userAttNumber].key, "end_time");
-  memcpy(p_kindling_event->userAttributes[userAttNumber].value, to_string(s_evt->get_ts()).data(),
-         19);
-  p_kindling_event->userAttributes[userAttNumber].valueType = UINT64;
-  p_kindling_event->userAttributes[userAttNumber].len = 19;
-  userAttNumber++;
-
-  strcpy(p_kindling_event->userAttributes[userAttNumber].key, "trace_id");
-  memcpy(p_kindling_event->userAttributes[userAttNumber].value, traceId, traceId_offset);
-  p_kindling_event->userAttributes[userAttNumber].valueType = CHARBUF;
-  p_kindling_event->userAttributes[userAttNumber].len = traceId_offset;
-  userAttNumber++;
-
-  strcpy(p_kindling_event->userAttributes[userAttNumber].key, "span");
-  memcpy(p_kindling_event->userAttributes[userAttNumber].value, span_char, span_offset);
-  p_kindling_event->userAttributes[userAttNumber].valueType = CHARBUF;
-  p_kindling_event->userAttributes[userAttNumber].len = span_offset;
-  userAttNumber++;
-
-  strcpy(p_kindling_event->name, "apm_span_event");
-  p_kindling_event->context.tinfo.tid = threadInfo->m_tid;
-  map<uint64_t, char*>::iterator key =
-      ptid_comm.find(threadInfo->m_pid << 32 | (threadInfo->m_tid & 0xFFFFFFFF));
-  if (key != ptid_comm.end()) {
-    strcpy(p_kindling_event->context.tinfo.comm, key->second);
-  }
-  p_kindling_event->context.tinfo.pid = threadInfo->m_pid;
-  p_kindling_event->paramsNumber = userAttNumber;
-}
-
-void parse_tm(char* data_val, sinsp_evt_param data_param, sinsp_threadinfo* threadInfo) {
-  char* comm_char = new char[256];
-  int val_offset = 0;
-  int tmp_offset = 0;
-  for (int i = 6; i < data_param.m_len; i++) {
-    if (data_val[i] == '!') {
-      if (val_offset == 0) {
-        tid_char[tmp_offset] = '\0';
-      } else if (val_offset == 1) {
-        comm_char[tmp_offset] = '\0';
-        break;
-      }
-      tmp_offset = 0;
-      val_offset++;
-      continue;
-    }
-    if (val_offset == 0) {
-      tid_char[tmp_offset] = data_val[i];
-    } else if (val_offset == 1) {
-      comm_char[tmp_offset] = data_val[i];
-    }
-    tmp_offset++;
-  }
-  uint64_t v_tid = inspector->get_pid_vtid_info(threadInfo->m_pid, atol(tid_char));
-  if (v_tid == 0) {
-    if (ptid_comm[threadInfo->m_pid << 32 | (atol(tid_char) & 0xFFFFFFFF)] != nullptr &&
-        memcmp(ptid_comm[threadInfo->m_pid << 32 | (atol(tid_char) & 0xFFFFFFFF)], comm_char,
-               strlen(comm_char)) == 0) {
-      delete[] comm_char;
-    } else {
-      ptid_comm[threadInfo->m_pid << 32 | (atol(tid_char) & 0xFFFFFFFF)] = comm_char;
-    }
-  } else {
-    if (ptid_comm[threadInfo->m_pid << 32 | (v_tid & 0xFFFFFFFF)] != nullptr &&
-        memcmp(ptid_comm[threadInfo->m_pid << 32 | (v_tid & 0xFFFFFFFF)], comm_char,
-               strlen(comm_char)) == 0) {
-      delete[] comm_char;
-    } else {
-      ptid_comm[threadInfo->m_pid << 32 | (v_tid & 0xFFFFFFFF)] = comm_char;
-    }
-  }
 }
 
 void init_kindling_event(kindling_event_t_for_go* p_kindling_event, void** pp_kindling_event) {
@@ -953,195 +586,6 @@ uint16_t get_kindling_source(uint16_t etype) {
         // TODO add cases of tracepoint, kprobe, uprobe
       default:
         return SYSCALL_EXIT;
-    }
-  }
-}
-
-void attach_pid(char* pid, bool is_new_start, bool is_attach, bool is_all_attach, bool is_ps) {
-  char result_buf[1024], command[1024];
-  int rc = 0;
-  FILE* fp;
-  if (is_new_start) {
-    sleep(10);
-  }
-  if (is_all_attach && is_ps) {
-    const char* ps_command = "ps -ef | grep \"java\" | grep -v \"grep\" | awk '{print $2}' \0";
-    snprintf(command, sizeof(command), "%s", ps_command);
-  } else {
-    string attach_command_prefix;
-    if (is_attach) {
-      attach_command_prefix = "./async-profiler/profiler.sh start ";
-    } else {
-      attach_command_prefix = "./async-profiler/profiler.sh stop ";
-    }
-    attach_command_prefix.append(pid);
-    strcpy(command, attach_command_prefix.c_str());
-  }
-
-  fp = popen(command, "r");
-  if (NULL == fp) {
-    perror("popen execute failed!\n");
-    return;
-  }
-  if (!is_ps && is_attach) {
-    cout << "------"
-         << " start attach for pid " << pid << "------" << endl;
-  }
-  if (!is_ps && !is_attach) {
-    cout << "------"
-         << " start detach for pid " << pid << "------" << endl;
-  }
-
-  while (fgets(result_buf, sizeof(result_buf), fp) != NULL) {
-    if ('\n' == result_buf[strlen(result_buf) - 1]) {
-      result_buf[strlen(result_buf) - 1] = '\0';
-    }
-    if (is_ps) {
-      attach_pid(result_buf, false, is_attach, is_all_attach, false);
-
-    } else {
-      printf("%s\r\n", result_buf);
-    }
-  }
-
-  rc = pclose(fp);
-  if (-1 == rc) {
-    perror("close command fp failed!\n");
-    exit(1);
-  } else {
-    printf("command:【%s】command process status:【%d】command return value:【%d】\r\n", command,
-           rc, WEXITSTATUS(rc));
-  }
-
-  if (!is_ps && is_attach) {
-    cout << "------end attach for pid " << pid << "------" << endl;
-  }
-  if (!is_ps && !is_attach) {
-    cout << "------end detach for pid " << pid << "------" << endl;
-  }
-}
-
-void attach_agent(int64_t pid, char* error_message, bool is_attach) {
-  char result_buf[1024], command[1024];
-  string attach_command_prefix;
-  if (is_attach) {
-    attach_command_prefix = "./async-profiler/jattach.sh start ";
-  } else {
-    attach_command_prefix = "./async-profiler/jattach.sh stop ";
-  }
-  attach_command_prefix.append(std::to_string(pid));
-  strcpy(command, attach_command_prefix.c_str());
-
-  FILE* fp;
-  fp = popen(command, "r");
-  if (NULL == fp) {
-    perror("popen execute failed!\n");
-    strcpy(error_message, "popen execute failed");
-    return;
-  }
-  if (is_attach) {
-    cout << "------"
-         << " start attach agent for pid " << pid << "------" << endl;
-  } else {
-    cout << "------"
-         << " start detach agent for pid " << pid << "------" << endl;
-  }
-
-  char* error_msg;
-  while (fgets(result_buf, sizeof(result_buf), fp) != NULL) {
-    if ('\n' == result_buf[strlen(result_buf) - 1]) {
-      result_buf[strlen(result_buf) - 1] = '\0';
-    }
-    error_msg = strstr(result_buf, "[ERROR] ");
-    if (error_msg) {
-      strcpy(error_message, error_msg);
-    }
-    printf("%s\r\n", result_buf);
-  }
-
-  int rc = pclose(fp);
-  if (-1 == rc) {
-    perror("close command fp failed!\n");
-    strcpy(error_message, "close command fp failed");
-    return;
-  } else {
-    printf("command:【%s】command process status:【%d】command return value:【%d】\r\n", command,
-           rc, WEXITSTATUS(rc));
-  }
-
-  if (is_attach) {
-    cout << "------end attach agent for pid " << pid << "------" << endl;
-  } else {
-    cout << "------end detach agent for pid " << pid << "------" << endl;
-  }
-}
-
-char* start_attach_agent(int64_t pid) {
-  char* error_message = (char*)malloc(1024 * sizeof(char));
-  error_message[0] = '\0';
-  if (!inspector) {
-    strcpy(error_message, "Please start profile first");
-  } else {
-    attach_agent(pid, error_message, true);
-  }
-  return error_message;
-}
-
-char* stop_attach_agent(int64_t pid) {
-  char* error_message = (char*)malloc(1024 * sizeof(char));
-  error_message[0] = '\0';
-  if (!inspector) {
-    strcpy(error_message, "Please start profile first");
-  } else {
-    attach_agent(pid, error_message, false);
-  }
-  return error_message;
-}
-
-int start_profile() {
-  if (!inspector) {
-    return -1;
-  }
-  is_start_profile = true;
-  attach_pid(nullptr, false, true, true, true);
-  inspector->set_eventmask(PPME_CPU_ANALYSIS_E);
-
-  return 0;
-}
-
-int stop_profile() {
-  if (!inspector) {
-    return -1;
-  }
-  is_start_profile = false;
-  attach_pid(nullptr, false, false, true, true);
-  inspector->unset_eventmask(PPME_CPU_ANALYSIS_E);
-
-  return 0;
-}
-
-void start_profile_debug(int64_t pid, int64_t tid) {
-  is_profile_debug = true;
-  debug_pid = pid;
-  debug_tid = tid;
-}
-
-void stop_profile_debug() {
-  is_profile_debug = false;
-  debug_pid = 0;
-  debug_tid = 0;
-}
-
-void print_profile_debug_info(sinsp_evt* sevt) {
-  if (!debug_file_log.is_open()) {
-    debug_file_log.open("profile_debug.log", ios::app | ios::out);
-  }
-  string line;
-  if (formatter->tostring(sevt, &line)) {
-    if (debug_file_log.is_open()) {
-      debug_file_log << sevt->get_ts() << "  ";
-      debug_file_log << line;
-      debug_file_log << "\n";
     }
   }
 }

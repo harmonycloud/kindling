@@ -41,7 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'cpp', 'go', 'javascript' ]
+        language: [ 'cpp', 'go' ]
         # CodeQL supports [ 'cpp', 'csharp', 'go', 'java', 'javascript', 'python', 'ruby' ]
         # Use only 'java' to analyze code written in Java, Kotlin or both
         # Use only 'javascript' to analyze code written in JavaScript, TypeScript or both
@@ -75,17 +75,8 @@ jobs:
         # Details on CodeQL's query packs refer to : https://docs.github.com/en/code-security/code-scanning/automatically-scanning-your-code-for-vulnerabilities-and-errors/configuring-code-scanning#using-queries-in-ql-packs
         # queries: security-extended,security-and-quality
 
-    - if: matrix.language != 'javascript' 
-      name: Build the agent using Builder Image
+    - name: Build the agent using Builder Image
       run: make
-      
-    - if: matrix.language == 'javascript'
-      name: Install javascript dependencies and Build
-      run: |
-        yum install -y nodejs npm
-        cd camera-front
-        npm install && npm run build
-        
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2

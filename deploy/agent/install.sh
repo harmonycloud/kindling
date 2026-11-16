@@ -8,7 +8,6 @@ kubectl create serviceaccount kindling-agent -nkindling
 kubectl apply -f kindling-clusterrole.yml
 kubectl apply -f kindling-clusterrolebinding.yml
 kubectl create cm kindlingcfg -n kindling --from-file=kindling-collector-config.yml
-kubectl apply -f camera-front-configmap.yml
 kubectl apply -f kindling-deploy.yml
 
 # configure Prometheus

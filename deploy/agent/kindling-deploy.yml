@@ -16,23 +16,6 @@ spec:
     spec:
       serviceAccount: kindling-agent
       containers:
-      - name: kindling-camera-front
-        image: kindlingproject/kindling-camera-front:latest
-        imagePullPolicy: Always
-        resources:
-          limits:
-            memory: 300Mi
-          requests:
-            memory: 30Mi
-        ports:
-        - containerPort: 9504
-          protocol: TCP
-        volumeMounts:
-        - mountPath: /app/camera-front/node/settings.js
-          name: camera-front-config
-          subPath: settings.js
-        - name: shared-data
-          mountPath: /tmp/kindling
       - name: kindling-agent
         image: kindlingproject/kindling-agent:latest
         imagePullPolicy: Always
@@ -75,8 +58,6 @@ spec:
         volumeMounts:
         - mountPath: /app/config
           name: kindlingcfg
-        - name: shared-data
-          mountPath: /tmp/kindling
         - mountPath: /sys
           name: sys-vol
         - mountPath: /etc/modprobe.d
@@ -116,11 +97,6 @@ spec:
           defaultMode: 420
           name: kindlingcfg
         name: kindlingcfg
-      - configMap:
-          name: camera-front-config
-        name: camera-front-config
-      - name: shared-data
-        emptyDir: {}
       - hostPath:
           path: /etc/modprobe.d
         name: modprobe-d

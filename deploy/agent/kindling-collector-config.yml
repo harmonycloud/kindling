@@ -1,8 +1,8 @@
 controller:
   http:
-    enable: true
+    enable: false
     port: :9503
-  modules: ["profile"]
+  modules: []
 
 receivers:
   cgoreceiver:
@@ -58,21 +58,6 @@ receivers:
       pids: []
 
 analyzers:
-  cpuanalyzer:
-    # sampling_interval is the sampling interval for the same url. The unit is second.
-    sampling_interval: 5
-    # segment_size defines how many segments(seconds) can be cached to wait for sending.
-    # The elder segments will be overwritten by the newer ones, so don't set it too low.
-    segment_size: 40
-    # edge_events_window_size is the size of the duration window that seats the edge events.
-    # The unit is second. The greater it is, the more data will be stored.
-    edge_events_window_size: 2
-    # java_trace_delete_interval is the interval for cleaning up expired data in javatraces.
-    # The unit is seconds.
-    java_trace_delete_interval: 20
-    # java_trace_expiration_time is the expiration time for data in javatraces.
-    # The unit is seconds.
-    java_trace_expiration_time: 120
   tcpconnectanalyzer:
     channel_size: 10000
     wait_event_second: 10
@@ -202,18 +187,6 @@ processors:
       error_data: 100
 
 exporters:
-  cameraexporter:
-    # Options: ["file", "elasticsearch"]
-    storage: file
-    # Effective when storage is "file"
-    file_config:
-      storage_path: /tmp/kindling
-      # Max file count for each process
-      max_file_count_each_process: 50
-    # Effective when storage is "elasticsearch"
-    es_config:
-      es_host: http://10.10.10.10:9200
-      index_suffix: dev
   otelexporter:
     adapter_config:
       need_trace_as_metric: true

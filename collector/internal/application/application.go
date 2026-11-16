@@ -12,14 +12,12 @@ import (
 
 	"github.com/Kindling-project/kindling/collector/pkg/component"
 	"github.com/Kindling-project/kindling/collector/pkg/component/analyzer"
-	"github.com/Kindling-project/kindling/collector/pkg/component/analyzer/cpuanalyzer"
 	"github.com/Kindling-project/kindling/collector/pkg/component/analyzer/k8sinfoanalyzer"
 	"github.com/Kindling-project/kindling/collector/pkg/component/analyzer/network"
 	"github.com/Kindling-project/kindling/collector/pkg/component/analyzer/noopanalyzer"
 	"github.com/Kindling-project/kindling/collector/pkg/component/analyzer/tcpconnectanalyzer"
 	"github.com/Kindling-project/kindling/collector/pkg/component/analyzer/tcpmetricanalyzer"
 	"github.com/Kindling-project/kindling/collector/pkg/component/consumer"
-	"github.com/Kindling-project/kindling/collector/pkg/component/consumer/exporter/cameraexporter"
 	"github.com/Kindling-project/kindling/collector/pkg/component/consumer/exporter/logexporter"
 	"github.com/Kindling-project/kindling/collector/pkg/component/consumer/exporter/otelexporter"
 	"github.com/Kindling-project/kindling/collector/pkg/component/consumer/processor/aggregateprocessor"
@@ -81,7 +79,6 @@ func (a *Application) Shutdown() error {
 func (a *Application) registerFactory() {
 	a.componentsFactory.RegisterReceiver(cgoreceiver.Cgo, cgoreceiver.NewCgoReceiver, cgoreceiver.NewDefaultConfig())
 	a.componentsFactory.RegisterAnalyzer(network.Network.String(), network.NewNetworkAnalyzer, network.NewDefaultConfig())
-	a.componentsFactory.RegisterAnalyzer(cpuanalyzer.CpuProfile.String(), cpuanalyzer.NewCpuAnalyzer, cpuanalyzer.NewDefaultConfig())
 	a.componentsFactory.RegisterProcessor(k8sprocessor.K8sMetadata, k8sprocessor.NewKubernetesProcessor, &k8sprocessor.DefaultConfig)
 	a.componentsFactory.RegisterExporter(otelexporter.Otel, otelexporter.NewExporter, &otelexporter.Config{})
 	a.componentsFactory.RegisterAnalyzer(tcpmetricanalyzer.TcpMetric.String(), tcpmetricanalyzer.NewTcpMetricAnalyzer, &tcpmetricanalyzer.Config{})
@@ -90,7 +87,6 @@ func (a *Application) registerFactory() {
 	a.componentsFactory.RegisterAnalyzer(k8sinfoanalyzer.Type.String(), k8sinfoanalyzer.New, k8sinfoanalyzer.NewDefaultConfig())
 	a.componentsFactory.RegisterProcessor(aggregateprocessor.Type, aggregateprocessor.New, aggregateprocessor.NewDefaultConfig())
 	a.componentsFactory.RegisterAnalyzer(tcpconnectanalyzer.Type.String(), tcpconnectanalyzer.New, tcpconnectanalyzer.NewDefaultConfig())
-	a.componentsFactory.RegisterExporter(cameraexporter.Type, cameraexporter.New, cameraexporter.NewDefaultConfig())
 }
 
 func (a *Application) readInConfig(path string) error {
@@ -114,8 +110,6 @@ func (a *Application) buildPipeline() error {
 	// Initialize exporters
 	otelExporterFactory := a.componentsFactory.Exporters[otelexporter.Otel]
 	otelExporter := otelExporterFactory.NewFunc(otelExporterFactory.Config, a.telemetry.GetTelemetryTools(otelexporter.Otel))
-	cameraExporterFactory := a.componentsFactory.Exporters[cameraexporter.Type]
-	cameraExporter := cameraExporterFactory.NewFunc(cameraExporterFactory.Config, a.telemetry.GetTelemetryTools(cameraexporter.Type))
 	// Initialize all processors
 	// 1. DataGroup Aggregator
 	aggregateProcessorFactory := a.componentsFactory.Processors[aggregateprocessor.Type]
@@ -134,13 +128,10 @@ func (a *Application) buildPipeline() error {
 	tcpAnalyzer := tcpAnalyzerFactory.NewFunc(tcpAnalyzerFactory.Config, a.telemetry.GetTelemetryTools(tcpmetricanalyzer.TcpMetric.String()), []consumer.Consumer{k8sMetadataProcessor})
 	tcpConnectAnalyzerFactory := a.componentsFactory.Analyzers[tcpconnectanalyzer.Type.String()]
 	tcpConnectAnalyzer := tcpConnectAnalyzerFactory.NewFunc(tcpConnectAnalyzerFactory.Config, a.telemetry.GetTelemetryTools(tcpconnectanalyzer.Type.String()), []consumer.Consumer{k8sMetadataProcessor})
-
-	cpuAnalyzerFactory := a.componentsFactory.Analyzers[cpuanalyzer.CpuProfile.String()]
-	cpuAnalyzer := cpuAnalyzerFactory.NewFunc(cpuAnalyzerFactory.Config, a.telemetry.GetTelemetryTools(cpuanalyzer.CpuProfile.String()), []consumer.Consumer{cameraExporter})
 	k8sInfoAnalyzerFactory := a.componentsFactory.Analyzers[k8sinfoanalyzer.Type.String()]
 	k8sInfoAnalyzer := k8sInfoAnalyzerFactory.NewFunc(k8sInfoAnalyzerFactory.Config, a.telemetry.GetTelemetryTools(k8sinfoanalyzer.Type.String()), []consumer.Consumer{otelExporter})
 	// Initialize receiver packaged with multiple analyzers
-	analyzerManager, err := analyzer.NewManager(networkAnalyzer, tcpAnalyzer, tcpConnectAnalyzer, cpuAnalyzer, k8sInfoAnalyzer)
+	analyzerManager, err := analyzer.NewManager(networkAnalyzer, tcpAnalyzer, tcpConnectAnalyzer, k8sInfoAnalyzer)
 	if err != nil {
 		return fmt.Errorf("error happened while creating analyzer manager: %w", err)
 	}
@@ -149,11 +140,5 @@ func (a *Application) buildPipeline() error {
 	cgoReceiverFactory := a.componentsFactory.Receivers[cgoreceiver.Cgo]
 	cgoReceiver := cgoReceiverFactory.NewFunc(cgoReceiverFactory.Config, a.telemetry.GetTelemetryTools(cgoreceiver.Cgo), analyzerManager)
 	a.receiver = cgoReceiver
-
-	a.controllerFactory.RegistModule("profile",
-		cpuAnalyzer.(*cpuanalyzer.CpuAnalyzer).ProfileModule,
-		cgoReceiver.(*cgoreceiver.CgoReceiver).ProfileModule,
-	)
-
 	return nil
 }

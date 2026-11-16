@@ -8,15 +8,9 @@
 #ifndef SYSDIG_KINDLING_H
 #define SYSDIG_KINDLING_H
 
-#include <QCoreApplication>
-#include <QPluginLoader>
-#include <QString>
-#include <QtDebug>
-#include <QtPlugin>
 #include <chrono>
 #include <cstdlib>
 #include <iomanip>
-#include "KindlingInterface.h"
 #include "sinsp.h"
 
 int init_probe();
@@ -34,24 +28,6 @@ int get_events_by_interval(uint64_t interval, void** kindlingEvent, void* count)
 uint16_t get_kindling_category(sinsp_evt* sEvt);
 
 void init_sub_label();
-
-int start_profile();
-
-int stop_profile();
-
-void start_profile_debug(int64_t pid, int64_t tid);
-
-void stop_profile_debug();
-
-void print_profile_debug_info(sinsp_evt* sevt);
-
-void attach_pid(char* pid, bool is_new_start, bool is_attach, bool is_all_attach, bool is_ps);
-
-char* start_attach_agent(int64_t pid);
-
-char* stop_attach_agent(int64_t pid);
-
-void attach_agent(int64_t pid, char* error_message, bool is_attach);
 
 void get_capture_statistics(struct capture_statistics_for_go* stats);
 
@@ -128,19 +104,6 @@ struct kindling_event_t_for_go {
     } fdInfo;
   } context;
 };
-
-void parse_jf(char* data_val, sinsp_evt_param data_param, kindling_event_t_for_go* p_kindling_event,
-              sinsp_threadinfo* threadInfo, uint16_t& userAttNumber);
-
-void parse_xtid(sinsp_evt* s_evt, char* data_val, sinsp_evt_param data_param,
-                kindling_event_t_for_go* p_kindling_event, sinsp_threadinfo* threadInfo,
-                uint16_t& userAttNumber);
-
-void parse_span(sinsp_evt *s_evt, char *data_val, sinsp_evt_param data_param,
-                kindling_event_t_for_go *p_kindling_event, sinsp_threadinfo* threadInfo,
-                uint16_t &userAttNumber);
-
-void parse_tm(char* data_val, sinsp_evt_param data_param, sinsp_threadinfo* threadInfo);
 
 void init_kindling_event(kindling_event_t_for_go* p_kindling_event, void** pp_kindling_event);
 
