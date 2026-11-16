@@ -1,3 +1,6 @@
+# Copyright (C) 2023 Kindling Project Authors.
+# SPDX-License-Identifier: Apache-2.0
+
 ASYNC_PROFILER=async-profiler-1.0.3-linux-x64.tar.gz
 KINDLING_JAVA=kindling-java-1.0.3.tar.gz
 APM_ALL=apm-all-3.1.0.jar

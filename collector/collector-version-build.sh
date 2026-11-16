@@ -1,3 +1,6 @@
+# Copyright (C) 2022 Kindling Project Authors.
+# SPDX-License-Identifier: Apache-2.0
+
 GitCommit=$(git rev-parse --short HEAD || echo unsupported)
 echo "Git commit:" "$GitCommit"
 

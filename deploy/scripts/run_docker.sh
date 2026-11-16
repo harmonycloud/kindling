@@ -1,3 +1,6 @@
+# Copyright (C) 2022-2023 Kindling Project Authors.
+# SPDX-License-Identifier: Apache-2.0
+
 script_dir="$(dirname "$0")"
 workspace_root=$(realpath "${script_dir}/../")
 

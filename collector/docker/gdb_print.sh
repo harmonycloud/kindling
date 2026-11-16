@@ -1,4 +1,7 @@
 #!/bin/sh
+# Copyright (C) 2022 Kindling Project Authors.
+# SPDX-License-Identifier: Apache-2.0
+
 
 binname=$1
 corefile=$2

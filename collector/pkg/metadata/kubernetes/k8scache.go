@@ -1,3 +1,6 @@
+// Copyright (C) 2022-2024 Kindling Project Authors.
+// SPDX-License-Identifier: Apache-2.0
+
 package kubernetes
 
 import (
