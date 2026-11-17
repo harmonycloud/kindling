@@ -28,12 +28,6 @@ jobs:
           docker tag kindlingproject/kindling-agent:latesttest kindlingproject/kindling-agent:${{ env.RELEASE }}
           docker push kindlingproject/kindling-agent:${{ env.RELEASE }}
 
-          docker pull kindlingproject/kindling-camera-front:latesttest
-          docker tag kindlingproject/kindling-camera-front:latesttest kindlingproject/kindling-camera-front:latest
-          docker push kindlingproject/kindling-camera-front:latest
-          docker tag kindlingproject/kindling-camera-front:latesttest kindlingproject/kindling-camera-front:${{ env.RELEASE }}
-          docker push kindlingproject/kindling-camera-front:${{ env.RELEASE }}
-
           docker pull kindlingproject/kindling-grafana:latesttest
           docker tag kindlingproject/kindling-grafana:latesttest kindlingproject/kindling-grafana:latest
           docker push kindlingproject/kindling-grafana:latest
@@ -42,7 +36,6 @@ jobs:
       - name: Prepare Deploy
         run: |
           sed -i 's#kindlingproject/kindling-agent:latest#kindlingproject/kindling-agent:${{ env.RELEASE }}#g' deploy/agent/kindling-deploy.yml
-          sed -i 's#kindling-camera-front:latest#kindling-camera-front:${{ env.RELEASE }}#g' deploy/agent/kindling-deploy.yml
           sed -i 's#kindling-grafana:latest#kindling-grafana:${{ env.RELEASE }}#g' deploy/grafana-with-plugins/kindling-grafana.yaml
           mv deploy kindling-${{ env.RELEASE }}-install
           tar -czvf kindling-${{ env.RELEASE }}-install.tar.gz  kindling-${{ env.RELEASE }}-install

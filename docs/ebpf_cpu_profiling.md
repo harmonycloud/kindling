@@ -4,9 +4,6 @@ Kindling can sample CPU call stacks with eBPF (~97Hz), symbolize them with a
 minimal BCC symbolizer baked into `libkindling`, and push gzip pprof profiles to
 [Grafana Pyroscope](https://grafana.com/oss/pyroscope/) every **15 seconds**.
 
-This path is **independent** of the existing Camera On/OffCPU flame graph
-(`cpuanalyzer` → `cameraexporter` → `camera-front`).
-
 ## Enable / disable
 
 Edit the collector ConfigMap / config file:
@@ -68,7 +65,7 @@ a system `libbcc` package.
 | Sources | `probe/src/core/symbolizer/` |
 | Link into | `libkindling.so` (`probe/src/CMakeLists.txt`) |
 
-Build-host packages (in addition to existing probe deps such as Qt5 / cmake):
+Build-host packages (in addition to existing probe deps such as cmake):
 
 - `elfutils-devel` / `libelf-dev`
 - `zlib-devel` / `zlib1g-dev`

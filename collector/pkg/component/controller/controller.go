@@ -13,6 +13,8 @@ import (
 	"github.com/Kindling-project/kindling/collector/pkg/component"
 )
 
+type ExportSubModule func() (name string, start func() error, stop func() error)
+
 type ControllerAPI interface {
 	RegistController(c Controller)
 	RegistModule(module string, subModules ...ExportSubModule)
@@ -61,15 +63,8 @@ func (cf *ControllerFactory) ConstructConfig(viper *viper.Viper, tools *componen
 	if err != nil {
 		tools.Logger.Errorf("Error happened when reading controller config, will disable all controller: %v", err)
 	}
-	if controllerConfig.Http != nil {
+	if controllerConfig.Http != nil && controllerConfig.Http.Enable {
 		httpAPI := NewHttpAPI(tools)
-		for _, module := range controllerConfig.Modules {
-			switch module {
-			case ProfileModule:
-				profileController := NewProfileController(tools)
-				httpAPI.RegistController(profileController)
-			}
-		}
 		go http.ListenAndServe(controllerConfig.Http.Port, httpAPI)
 		cf.Controller = httpAPI
 	}

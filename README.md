@@ -8,36 +8,35 @@ Visit our [Kindling website](http://kindling.harmonycloud.cn/) for more informat
 
 ## What is Kindling
 
-Kindling is an eBPF-based cloud native monitoring tool, which aims to help users understand the app behavior from kernel to code stack. With **trace profiling**, we hope the user can understand the application's behavior easily and find the root cause in seconds. Besides trace profiling, Kindling provides an easy way to get an overview of network flows in the Kubernetes environment, and many built-in network monitor dashboards like TCP retransmit, DNS, throughput, and TPS. Not only as a network monitor, but Kindling is also trying to analyze one detail RPC call and get the following information, which can be found in network explore in chrome. And the usage is the same as network exploration in chrome, with which users can tell which part to dig into to find the root cause of the problem in the production environment.
+Kindling is an eBPF-based cloud native monitoring tool for network flows in Kubernetes. It provides a service map and built-in dashboards for TCP retransmit, DNS, throughput, and TPS. It also analyzes one RPC call and shows a timing breakdown similar to the network panel in Chrome, so you can see which part of the request to investigate.
 
 ![img](https://cdn.nlark.com/yuque/0/2021/png/749988/1633767195234-af2913c4-75d7-447d-99bb-bd1d815883ae.png)
 
-## What is Kindling Trace-profiling
-With traces, metrics, and logs, many issues still can’t be understood easily. Trace-profiling is trying to integrate the OnCPU and OffCPU events within the traces and collect the logs output during the trace execution timeframe.
-
-OnCPU events are just like the flame graph, but the code has been collected at the thread level instead of the process level. And the trace was executed by one thread, so users can understand how the trace was executing on the CPU.
-
-OffCPU events are the opposite of OnCPU events. As for the trace analysis, most traces spend a lifetime waiting for the locks, database query, remote process call, file reading, or file writing. All of these events cause the thread in waiting status, and they are considered as OffCPU events.
-
-So for trace profiling, how all threads were executed is recorded and can be replayed.
-- The exact thread which executed the trace span is highlighted.
-- The logs printed by each thread are collected and correlated to the relative thread with its timestamp.
-- The code execution flame graph is correlated to the time series where the CPU is busy.
-- The network-related metrics are correlated to the time series where the network syscalls are executing.
-- The file-related metrics are correlated to the time series where the file syscalls are executing.
-
 ## Architecture
 
-From a high-level view, the agent runs as DeamonSet in Kubernetes. It collects all syscalls and some other tracepoints. We use different exporters for different distributions. 
-For example, we build a Prometheus exporter to export the data which can be stored in Prometheus and displayed in Grafana Plugin. But for the trace profiling module, the UI is different, that's a standalone module. 
+From a high-level view, the agent runs as a DaemonSet in Kubernetes. It collects syscalls and other tracepoints. A Prometheus exporter stores the metrics in Prometheus and displays them with the Grafana plugin.
 
-![image.png](/docs/imgs/architecture.png)
+```mermaid
+flowchart LR
+  subgraph node [K8s node]
+    agent[Kindling DaemonSet agent]
+    kernel[Linux kernel eBPF]
+  end
+  agent --> kernel
+  agent --> promExport[Prometheus exporter]
+  promExport --> prom[Prometheus]
+  prom --> grafana[Grafana plugin]
+  agent --> receiver[Data receiver]
+  receiver --> kafka[Kafka]
+  kafka --> analyzer[Data analyzer]
+  analyzer --> es[Elasticsearch]
+```
 
 ## Linux kernel version support
 
-The Kindling eBPF module depends on the kernel version which is newer than 4.14. But for trace-profiling, the kernel version has to be newer than 4.17, hoping with more work, the trace-profiling can work on older kernel versions. As an eBPF constraint, the eBPF module can't work for older kernel versions. But for the users who want to try the functionality with the old kernel, we use the kernel module from Sysdig open-source project with enhancement and verification. Basically, the idea is to use a kernel module for tracking the kernel tracepoints. Thanks to Sysdig open-source project, it provides a tracepoint instrument framework for older kernel versions.
+The Kindling eBPF module depends on a kernel newer than 4.14. As an eBPF constraint, the eBPF module can't work for older kernel versions. For users who want to try the functionality with an old kernel, we use the kernel module from the Sysdig open-source project with enhancement and verification. The idea is to use a kernel module for tracking kernel tracepoints. Thanks to the Sysdig open-source project, it provides a tracepoint instrument framework for older kernel versions.
 
-For now, the kernel module works as expected as the eBPF module during our test except for trace-profiling, but it is recommended to use the eBPF module in the production environment as it is safer than the kernel module. In order to help the older kernel version user experience the eBPF magic, we also support the kernel model. And you are welcome to report issues with the kernel module. For functionality, the kernel module and eBPF module capture the same data and behave exactly the same. 
+For now, the kernel module works as expected as the eBPF module during our test, but it is recommended to use the eBPF module in the production environment as it is safer than the kernel module. In order to help the older kernel version user experience the eBPF magic, we also support the kernel model. And you are welcome to report issues with the kernel module. For functionality, the kernel module and eBPF module capture the same data and behave exactly the same. 
 
 ## Why do we build Kindling?
 
@@ -51,19 +50,11 @@ APM(Application Performance Monitoring) is good for those applications in Java w
 
 We found it may be helpful that we triage the issue first by checking the issue from the network view to identify issues roughly like "oh, it's a network problem, the code works fine, and we should dig into the configuration of calico" or "the infrastructure works fine, so the app code should be blamed, let's dig into the logs or the APM dashboard for further information".
 
-After we triage the issue, we need to pinpoint the root cause of the issue. That's why we need the trace-profiling module.
-
 ### Why eBPF?
 
 The libpcap way of analyzing the flows in the Kubernetes environment is too expensive for the CPU and network. The eBPF way of data capture cost much less than libpcap. eBPF is the most popular technology to track the Linux kernel where the virtual network, built by veth-pair and iptables, works. So eBPF is a proper technique to be used for tracking how the kernel responds to application requests.
 
 ## Core Features
-
-With the trace-profiling module, we can understand how ElasticSearch works easily. The following image shows how ElasticSearch is executing the `bulk insert` operation.
-
-![trace-profiling](/docs/imgs/traceprofiling.png)
-
-The next image shows a dependency map in Kubernetes. 
 
 ![img](https://cdn.nlark.com/yuque/0/2022/png/749988/1642572876088-c26396ac-e7bb-44e7-ae0c-cc96f3344cd8.png)
 
