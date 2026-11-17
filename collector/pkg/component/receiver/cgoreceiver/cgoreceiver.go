@@ -128,8 +128,6 @@ func (r *CgoReceiver) consumeEvents() {
 }
 
 func (r *CgoReceiver) Shutdown() error {
-	// TODO stop the C routine
-	C.stopProfile()
 	close(r.stopCh)
 	r.shutdownWG.Wait()
 	return nil
